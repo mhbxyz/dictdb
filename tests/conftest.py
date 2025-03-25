@@ -8,8 +8,8 @@ def table() -> Table:
     Two records are pre-inserted for testing purposes.
     """
     tbl = Table("test_table", primary_key="id")
-    tbl.insert_record({"id": 1, "name": "Alice", "age": 30})
-    tbl.insert_record({"id": 2, "name": "Bob", "age": 25})
+    tbl.insert({"id": 1, "name": "Alice", "age": 30})
+    tbl.insert({"id": 2, "name": "Bob", "age": 25})
     return tbl
 
 @pytest.fixture

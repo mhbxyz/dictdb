@@ -149,25 +149,35 @@ class Table:
         # Dynamically return a Field instance for undefined attributes.
         return Field(self, attr)
 
-    def insert_record(self, record: Dict[str, Any]) -> None:
+    def insert(self, record: Dict[str, Any]) -> None:
         """
         Inserts a new record into the table.
 
+        If the record does not contain the primary key, it automatically assigns the next available key.
+        If the record includes the primary key, it validates that no duplicate key exists.
+
         Args:
-            record: The record to insert. Must include the primary key.
+            record: The record to insert.
 
         Raises:
-            ValueError: If the record does not contain the primary key.
             DuplicateKeyError: If a record with the same primary key already exists.
         """
+        # Auto-generate primary key if not provided
         if self.primary_key not in record:
-            raise ValueError(f"Record must contain the primary key '{self.primary_key}'.")
-        key = record[self.primary_key]
-        if key in self.records:
-            raise DuplicateKeyError(f"Record with key '{key}' already exists in table '{self.table_name}'.")
-        self.records[key] = record
+            if self.records:
+                # Assumes keys are integers; auto-assign the next available integer key.
+                new_key = max(self.records.keys()) + 1
+            else:
+                new_key = 1
+            record[self.primary_key] = new_key
+        else:
+            key = record[self.primary_key]
+            if key in self.records:
+                raise DuplicateKeyError(f"Record with key '{key}' already exists in table '{self.table_name}'.")
 
-    def select_records(
+        self.records[record[self.primary_key]] = record
+
+    def select(
             self,
             columns: Optional[List[str]] = None,
             where: Optional[WherePredicate] = None
@@ -192,7 +202,7 @@ class Table:
                     results.append(record)
         return results
 
-    def update_records(
+    def update(
             self,
             changes: Dict[str, Any],
             where: Optional[WherePredicate] = None
@@ -219,7 +229,7 @@ class Table:
             raise RecordNotFoundError(f"No records match the update criteria in table '{self.table_name}'.")
         return updated_count
 
-    def delete_records(self, where: Optional[WherePredicate] = None) -> int:
+    def delete(self, where: Optional[WherePredicate] = None) -> int:
         """
         Deletes records that satisfy the given condition.
 
