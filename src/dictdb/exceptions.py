@@ -9,3 +9,7 @@ class DuplicateKeyError(DictDBError):
 class RecordNotFoundError(DictDBError):
     """Exception raised when no records match the query criteria."""
     pass
+
+class SchemaValidationError(DictDBError):
+    """Exception raised when a record does not conform to the table schema."""
+    pass
