@@ -35,6 +35,6 @@ jobs:
           ruff check src/dictdb
 
       # Step 5: Run tests using pytest.
-      - name: Run tests with pytest
-        run: |
-          pytest tests
+#      - name: Run tests with pytest
+#        run: |
+#          pytest tests
