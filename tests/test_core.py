@@ -237,3 +237,54 @@ def test_auto_assign_primary_key_with_schema() -> None:
     assert "id" in new_record and isinstance(new_record["id"], int)
     records = table.select(where=Query(table.id == new_record["id"]))
     assert len(records) == 1
+
+
+def test_update_atomicity_partial_failure(monkeypatch):
+    """
+    Test that if an update operation fails on one record (simulated via monkeypatching),
+    all previous changes are rolled back, leaving all records in their original state.
+    """
+    schema = {"id": int, "name": str, "age": int}
+    table = Table("atomic_test", primary_key="id", schema=schema)
+    table.insert({"id": 1, "name": "Alice", "age": 30})
+    table.insert({"id": 2, "name": "Bob", "age": 25})
+
+    # Capture the initial state using the new copy() method.
+    original_records = table.copy()
+
+    # Store the original validate_record method.
+    original_validate = table.validate_record
+
+    # Monkeypatch validate_record to simulate a failure for record with id 2.
+    def fake_validate(record):
+        if record["id"] == 2:
+            raise SchemaValidationError("Simulated failure for record 2")
+        else:
+            original_validate(record)
+
+    monkeypatch.setattr(table, "validate_record", fake_validate)
+
+    # Attempt to update all records. Expect a SchemaValidationError.
+    with pytest.raises(SchemaValidationError):
+        table.update({"age": 99})
+
+    # Verify that both records remain unchanged.
+    for key, original in original_records.items():
+        assert table.copy()[key] == original
+
+
+def test_update_atomicity_success():
+    """
+    Test that a successful update updates all matching records atomically.
+    """
+    schema = {"id": int, "name": str, "age": int}
+    table = Table("atomic_success", primary_key="id", schema=schema)
+    table.insert({"id": 1, "name": "Alice", "age": 30})
+    table.insert({"id": 2, "name": "Bob", "age": 25})
+
+    updated = table.update({"age": 40}, where=lambda r: True)
+    assert updated == 2
+
+    # Verify that the update was applied.
+    for record in table.all():
+        assert record["age"] == 40

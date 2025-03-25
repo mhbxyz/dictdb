@@ -244,7 +244,10 @@ class Table:
             where: Optional[WherePredicate] = None
     ) -> int:
         """
-        Updates records that satisfy the given condition.
+        Atomically updates records that satisfy the given condition.
+        If 'where' is omitted (None), all records in the table will be updated.
+        If an error occurs while updating any record (e.g., due to schema validation),
+        all changes made during this update operation are rolled back.
 
         Args:
             changes: Field-value pairs to update.
@@ -255,14 +258,30 @@ class Table:
 
         Raises:
             RecordNotFoundError: If no records match the update criteria.
+            Exception: Propagates any exception encountered during the update, after rolling back.
         """
+        updated_keys = []
+        backup = {}
         updated_count = 0
-        for record in self.records.values():
-            if where is None or where(record):
-                record.update(changes)
-                updated_count += 1
-        if updated_count == 0:
-            raise RecordNotFoundError(f"No records match the update criteria in table '{self.table_name}'.")
+        try:
+            for key, record in self.records.items():
+                if where is None or where(record):
+                    backup[key] = record.copy()
+                    # Mark the record for rollback immediately.
+                    updated_keys.append(key)
+                    record.update(changes)
+                    if self.schema is not None:
+                        self.validate_record(record)
+                    updated_count += 1
+
+            if updated_count == 0:
+                raise RecordNotFoundError(f"No records match the update criteria in table '{self.table_name}'.")
+        except Exception as e:
+            # Roll back all changes for records that were attempted to be updated.
+            for key in updated_keys:
+                self.records[key] = backup[key]
+            raise e
+
         return updated_count
 
     def delete(self, where: Optional[WherePredicate] = None) -> int:
@@ -284,6 +303,18 @@ class Table:
         if not keys_to_delete:
             raise RecordNotFoundError(f"No records match the deletion criteria in table '{self.table_name}'.")
         return len(keys_to_delete)
+
+    def copy(self) -> dict:
+        """
+        Returns a shallow copy of all records in the table as a dictionary mapping primary keys to record copies.
+        """
+        return {key: record.copy() for key, record in self.records.items()}
+
+    def all(self) -> list:
+        """
+        Returns a list of copies of all records in the table.
+        """
+        return [record.copy() for record in self.records.values()]
 
 
 class DictDB:
