@@ -22,14 +22,14 @@ Usage Example:
     db = DictDB()
     db.create_table("users")
     users = db.get_table("users")
-    users.insert_record({"id": 1, "name": "Alice", "age": 30})
-    results = users.select_records(where=Query(users.name == "Alice"))
+    users.insert({"id": 1, "name": "Alice", "age": 30})
+    results = users.select(where=Query(users.name == "Alice"))
     print(results)
 """
 
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from .exceptions import DuplicateKeyError, RecordNotFoundError
+from .exceptions import DuplicateKeyError, RecordNotFoundError, SchemaValidationError
 
 # Type alias for a predicate function that takes a record (dict) and returns a bool.
 Predicate = Callable[[Dict[str, Any]], bool]
@@ -140,32 +140,62 @@ class Table:
     like: where = Query(User.name == 'Alice')
     """
 
-    def __init__(self, name: str, primary_key: str = 'id') -> None:
+    def __init__(self, name: str, primary_key: str = 'id', schema: Optional[Dict[str, type]] = None) -> None:
         self.table_name: str = name  # Store the table name in table_name to free up 'name'
         self.primary_key: str = primary_key
         self.records: Dict[Any, Dict[str, Any]] = {}  # Maps primary key to record (dict)
+        self.schema = schema
+        if self.schema is not None:
+            # Ensure that the primary key is part of the schema.
+            if self.primary_key not in self.schema:
+                # Auto-add primary key to schema with type int.
+                self.schema[self.primary_key] = int
 
     def __getattr__(self, attr: str) -> Field:
-        # Dynamically return a Field instance for undefined attributes.
+        """
+        Allows dynamic attribute access to fields. For example, table.name will return
+        a Field object that can be used in query expressions.
+        """
         return Field(self, attr)
+
+    def validate_record(self, record: Dict[str, Any]) -> None:
+        """
+        Validates a record against the table's schema.
+
+        Raises:
+            SchemaValidationError: If the record does not conform to the schema.
+        """
+        # Check that all schema-defined fields are present and have the correct type.
+        for field, expected_type in self.schema.items():
+            if field not in record:
+                raise SchemaValidationError(f"Missing field '{field}' as defined in schema.")
+            if not isinstance(record[field], expected_type):
+                raise SchemaValidationError(
+                    f"Field '{field}' expects type '{expected_type.__name__}', got '{type(record[field]).__name__}'."
+                )
+        # Optionally, enforce that no extra fields are present.
+        for field in record.keys():
+            if field not in self.schema:
+                raise SchemaValidationError(f"Field '{field}' is not defined in the schema.")
 
     def insert(self, record: Dict[str, Any]) -> None:
         """
-        Inserts a new record into the table.
+        Inserts a new record into the table, with schema validation if a schema is defined.
 
         If the record does not contain the primary key, it automatically assigns the next available key.
         If the record includes the primary key, it validates that no duplicate key exists.
+        Additionally, if a schema is defined, the record is validated against the schema.
 
         Args:
             record: The record to insert.
 
         Raises:
             DuplicateKeyError: If a record with the same primary key already exists.
+            SchemaValidationError: If the record does not match the defined schema.
         """
-        # Auto-generate primary key if not provided
+        # Auto-generate primary key if not provided.
         if self.primary_key not in record:
             if self.records:
-                # Assumes keys are integers; auto-assign the next available integer key.
                 new_key = max(self.records.keys()) + 1
             else:
                 new_key = 1
@@ -173,7 +203,13 @@ class Table:
         else:
             key = record[self.primary_key]
             if key in self.records:
-                raise DuplicateKeyError(f"Record with key '{key}' already exists in table '{self.table_name}'.")
+                raise DuplicateKeyError(
+                    f"Record with key '{key}' already exists in table '{self.table_name}'."
+                )
+
+        # If a schema is defined, validate the record.
+        if self.schema is not None:
+            self.validate_record(record)
 
         self.records[record[self.primary_key]] = record
 

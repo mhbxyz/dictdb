@@ -1,5 +1,5 @@
 import pytest
-from dictdb import DictDB, Table, Query, DuplicateKeyError, RecordNotFoundError
+from dictdb import DictDB, Table, Query, DuplicateKeyError, RecordNotFoundError, SchemaValidationError
 
 
 # ----------------------------
@@ -180,3 +180,60 @@ def test_multiple_tables_independence(db: DictDB) -> None:
     products.insert({"id": 101, "name": "Widget"})
     assert len(users.select()) == 1
     assert len(products.select()) == 1
+
+
+# ----------------------------
+# New Tests for Schema Validation
+# ----------------------------
+
+def test_insert_valid_record_with_schema() -> None:
+    """
+    Test inserting a valid record into a table with a defined schema.
+    """
+    schema = {"id": int, "name": str, "age": int}
+    table = Table("schema_table", primary_key="id", schema=schema)
+    table.insert({"id": 1, "name": "Alice", "age": 30})
+    records = table.select()
+    assert len(records) == 1
+
+def test_insert_missing_field_in_schema() -> None:
+    """
+    Test inserting a record missing a field defined in the schema.
+    Expect SchemaValidationError.
+    """
+    schema = {"id": int, "name": str, "age": int}
+    table = Table("schema_table", primary_key="id", schema=schema)
+    with pytest.raises(SchemaValidationError):
+        table.insert({"id": 1, "name": "Alice"})  # Missing 'age'
+
+def test_insert_extra_field_not_in_schema() -> None:
+    """
+    Test inserting a record with an extra field not defined in the schema.
+    Expect SchemaValidationError.
+    """
+    schema = {"id": int, "name": str, "age": int}
+    table = Table("schema_table", primary_key="id", schema=schema)
+    with pytest.raises(SchemaValidationError):
+        table.insert({"id": 1, "name": "Alice", "age": 30, "extra": "value"})
+
+def test_insert_wrong_type_field_in_schema() -> None:
+    """
+    Test inserting a record where a field does not match the expected type.
+    Expect SchemaValidationError.
+    """
+    schema = {"id": int, "name": str, "age": int}
+    table = Table("schema_table", primary_key="id", schema=schema)
+    with pytest.raises(SchemaValidationError):
+        table.insert({"id": 1, "name": "Alice", "age": "30"})  # 'age' should be int
+
+def test_auto_assign_primary_key_with_schema() -> None:
+    """
+    Test auto-assignment of the primary key for a table with a defined schema.
+    """
+    schema = {"id": int, "name": str, "age": int}
+    table = Table("schema_table", primary_key="id", schema=schema)
+    new_record = {"name": "Bob", "age": 25}
+    table.insert(new_record)
+    assert "id" in new_record and isinstance(new_record["id"], int)
+    records = table.select(where=Query(table.id == new_record["id"]))
+    assert len(records) == 1
