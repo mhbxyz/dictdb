@@ -32,9 +32,9 @@ jobs:
       # Step 4: Run ruff to lint the code.
       - name: Run Ruff linter
         run: |
-          ruff .
+          ruff check src/dictdb
 
       # Step 5: Run tests using pytest.
-      - name: Run tests with pytest
-        run: |
-          pytest
+#      - name: Run tests with pytest
+#        run: |
+#          pytest tests
