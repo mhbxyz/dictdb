@@ -3,6 +3,7 @@ from typing import Any, Optional, Dict, List
 from .exceptions import SchemaValidationError, DuplicateKeyError, RecordNotFoundError
 from .condition import Condition, Query
 from .logging import logger
+from .types import Record, Schema
 
 
 class Field:
@@ -101,7 +102,7 @@ class Table:
     Allows dynamic attribute access to fields for building conditions.
     """
 
-    def __init__(self, name: str, primary_key: str = 'id', schema: Optional[Dict[str, type]] = None) -> None:
+    def __init__(self, name: str, primary_key: str = 'id', schema: Optional[Schema] = None) -> None:
         """
         Initializes a new Table.
 
@@ -116,7 +117,7 @@ class Table:
         """
         self.table_name: str = name  # Store the table name in table_name to free up 'name'
         self.primary_key: str = primary_key
-        self.records: Dict[Any, Dict[str, Any]] = {}  # Maps primary key to record (dict)
+        self.records: Dict[Any, Record] = {}  # Maps primary key to record (dict)
         self.schema = schema
         if self.schema is not None:
             # Ensure that the primary key is part of the schema.
@@ -135,7 +136,7 @@ class Table:
         """
         return Field(self, attr)
 
-    def validate_record(self, record: Dict[str, Any]) -> None:
+    def validate_record(self, record: Record) -> None:
         """
         Validates a record against the table's schema.
 
@@ -162,7 +163,7 @@ class Table:
             if field not in self.schema:
                 raise SchemaValidationError(f"Field '{field}' is not defined in the schema.")
 
-    def insert(self, record: Dict[str, Any]) -> None:
+    def insert(self, record: Record) -> None:
         """
         Inserts a new record into the table, with optional schema validation.
 
@@ -201,7 +202,7 @@ class Table:
             self,
             columns: Optional[List[str]] = None,
             where: Optional[Query] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Record]:
         """
         Retrieves records matching an optional condition.
 
@@ -213,7 +214,7 @@ class Table:
         :rtype: list of dict
         """
         logger.debug(f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}")
-        results: List[Dict[str, Any]] = []
+        results: List[Record] = []
         for record in self.records.values():
             if where is None or where(record):
                 if columns:
@@ -225,7 +226,7 @@ class Table:
 
     def update(
             self,
-            changes: Dict[str, Any],
+            changes: Record,
             where: Optional[Query] = None
     ) -> int:
         """
@@ -285,7 +286,7 @@ class Table:
             raise RecordNotFoundError(f"No records match the deletion criteria in table '{self.table_name}'.")
         return len(keys_to_delete)
 
-    def copy(self) -> Dict[Any, Dict[str, Any]]:
+    def copy(self) -> Dict[Any, Record]:
         """
         Returns a shallow copy of all records in the table.
 
@@ -294,7 +295,7 @@ class Table:
         """
         return {key: record.copy() for key, record in self.records.items()}
 
-    def all(self) -> List[Dict[str, Any]]:
+    def all(self) -> List[Record]:
         """
         Returns a list of copies of all records in the table.
 

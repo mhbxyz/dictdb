@@ -1,6 +1,6 @@
-from typing import Callable, Dict, Any
+from typing import Any
 
-Predicate = Callable[[Dict[str, Any]], bool]
+from .types import Record, Predicate
 
 
 class Condition:
@@ -17,13 +17,13 @@ class Condition:
         Initializes the Condition with a callable predicate.
 
         :param func: A function taking a record (dict) and returning bool.
-        :type func: Callable[[Dict[str, Any]], bool]
+        :type func: Callable[[Record], bool]
         :return: None
         :rtype: None
         """
         self.func: Predicate = func
 
-    def __call__(self, record: Dict[str, Any]) -> bool:
+    def __call__(self, record: Record) -> bool:
         """
         Evaluates the wrapped predicate on a given record.
 
@@ -102,7 +102,7 @@ class Query:
             )
         self.condition: Condition = condition
 
-    def __call__(self, record: Dict[str, Any]) -> bool:
+    def __call__(self, record: Record) -> bool:
         """
         Evaluates the underlying Condition on the given record.
 
