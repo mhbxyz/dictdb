@@ -5,7 +5,9 @@ from dictdb import Table, Query, DuplicateKeyError, RecordNotFoundError, SchemaV
 
 def test_insert_valid_record(table: Table) -> None:
     """
-    Inserting a record with an explicit primary key should still work.
+    Test inserting a record with an explicit primary key.
+
+    :param table: Table fixture prepopulated with test data.
     """
     table.insert({"id": 3, "name": "Charlie", "age": 40})
     records = table.select()
@@ -14,8 +16,9 @@ def test_insert_valid_record(table: Table) -> None:
 
 def test_insert_auto_assign_primary_key(table: Table) -> None:
     """
-    Inserts a record without a primary key and checks that an auto-assigned key is added.
-    In the fixture, the table already has keys 1 and 2, so the new record should be assigned key 3.
+    Test inserting a record without a primary key and verifying auto-assignment of the key.
+
+    :param table: Table fixture prepopulated with test data.
     """
     new_record = {"name": "David", "age": 35}
     table.insert(new_record)
@@ -29,18 +32,30 @@ def test_insert_auto_assign_primary_key(table: Table) -> None:
 
 def test_insert_duplicate_key(table: Table) -> None:
     """
-    Inserting a record with an explicit duplicate primary key should raise a DuplicateKeyError.
+    Test that inserting a record with a duplicate primary key raises a DuplicateKeyError.
+
+    :param table: Table fixture prepopulated with test data.
     """
     with pytest.raises(DuplicateKeyError):
         table.insert({"id": 1, "name": "Eve", "age": 28})
 
 
 def test_select_no_where(table: Table) -> None:
+    """
+    Test selecting all records from a table without a condition.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     records = table.select()
     assert len(records) == 2
 
 
 def test_select_with_where(table: Table) -> None:
+    """
+    Test selecting records from a table that match a specified condition.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     condition = Query(table.name == "Alice")
     records = table.select(where=condition)
     assert len(records) == 1
@@ -48,6 +63,11 @@ def test_select_with_where(table: Table) -> None:
 
 
 def test_select_with_columns(table: Table) -> None:
+    """
+    Test selecting specific columns from records that satisfy a condition.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     records = table.select(columns=["name"], where=Query(table.age >= 25))
     for rec in records:
         assert "name" in rec
@@ -55,6 +75,11 @@ def test_select_with_columns(table: Table) -> None:
 
 
 def test_update_records(table: Table) -> None:
+    """
+    Test updating records that match a condition.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     updated = table.update({"age": 26}, where=Query(table.name == "Bob"))
     assert updated == 1
     records = table.select(where=Query(table.name == "Bob"))
@@ -62,11 +87,21 @@ def test_update_records(table: Table) -> None:
 
 
 def test_update_no_match(table: Table) -> None:
+    """
+    Test that an update on records with no matches raises RecordNotFoundError.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     with pytest.raises(RecordNotFoundError):
         table.update({"age": 35}, where=Query(table.name == "Nonexistent"))
 
 
 def test_delete_records(table: Table) -> None:
+    """
+    Test deleting records that match a condition.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     deleted = table.delete(where=Query(table.name == "Bob"))
     assert deleted == 1
     records = table.select()
@@ -74,6 +109,11 @@ def test_delete_records(table: Table) -> None:
 
 
 def test_delete_no_match(table: Table) -> None:
+    """
+    Test that a delete on records with no matches raises RecordNotFoundError.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     with pytest.raises(RecordNotFoundError):
         table.delete(where=Query(table.name == "Nonexistent"))
 
@@ -102,8 +142,8 @@ def test_insert_missing_field_in_schema() -> None:
 
 def test_insert_extra_field_not_in_schema() -> None:
     """
-    Test inserting a record with an extra field not defined in the schema.
-    Expect SchemaValidationError.
+    Test inserting a record containing extra fields not defined in the schema.
+    Expect a SchemaValidationError.
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("schema_table", primary_key="id", schema=schema)
@@ -113,8 +153,8 @@ def test_insert_extra_field_not_in_schema() -> None:
 
 def test_insert_wrong_type_field_in_schema() -> None:
     """
-    Test inserting a record where a field does not match the expected type.
-    Expect SchemaValidationError.
+    Test inserting a record with a field of the wrong type.
+    Expect a SchemaValidationError.
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("schema_table", primary_key="id", schema=schema)
@@ -124,7 +164,7 @@ def test_insert_wrong_type_field_in_schema() -> None:
 
 def test_auto_assign_primary_key_with_schema() -> None:
     """
-    Test auto-assignment of the primary key for a table with a defined schema.
+    Test auto-assigning a primary key in a table that has a defined schema.
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("schema_table", primary_key="id", schema=schema)
@@ -137,8 +177,10 @@ def test_auto_assign_primary_key_with_schema() -> None:
 
 def test_update_atomicity_partial_failure(monkeypatch):
     """
-    Test that if an update operation fails on one record (simulated via monkeypatching),
-    all previous changes are rolled back, leaving all records in their original state.
+    Test that if one record fails schema validation during an update, changes
+    to all other updated records are rolled back.
+
+    :param monkeypatch: Pytest fixture for dynamically modifying or mocking code.
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("atomic_test", primary_key="id", schema=schema)
@@ -171,7 +213,7 @@ def test_update_atomicity_partial_failure(monkeypatch):
 
 def test_update_atomicity_success():
     """
-    Test that a successful update updates all matching records atomically.
+    Test that a successful update applies to all matching records atomically.
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("atomic_success", primary_key="id", schema=schema)

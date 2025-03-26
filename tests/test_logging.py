@@ -5,7 +5,9 @@ from dictdb import DictDB, configure_logging
 
 def test_configure_logging_no_file(capfd):
     """
-    Test configuring logging (console only) and check logs in captured stdout.
+    Test configuring logging with only console output.
+
+    :param capfd: Pytest fixture that captures stdout and stderr.
     """
     configure_logging(level="DEBUG", console=True, logfile=None)
 
@@ -23,7 +25,8 @@ def test_configure_logging_no_file(capfd):
 def test_configure_logging_with_file(tmp_path):
     """
     Test that specifying a logfile writes logs to that file.
-    We do not specify console=True, so no console logs are used in this test.
+
+    :param tmp_path: Pytest fixture providing a temporary directory unique to the test invocation.
     """
     log_file = tmp_path / "test_dictdb.log"
     configure_logging(level="DEBUG", console=False, logfile=str(log_file))
@@ -41,8 +44,9 @@ def test_configure_logging_with_file(tmp_path):
 
 def test_crud_logging_in_file(tmp_path):
     """
-    Test that CRUD operations produce the expected logs. We direct them to a log file,
-    then we read that file to verify the logs.
+    Test that CRUD operations produce the expected logs when directed to a log file.
+
+    :param tmp_path: Pytest fixture providing a temporary directory unique to the test invocation.
     """
     log_file = tmp_path / "crud_test.log"
     configure_logging(level="DEBUG", console=False, logfile=str(log_file))

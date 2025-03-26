@@ -2,8 +2,12 @@ from dictdb import Table, Query
 
 
 def test_field_equality(table: Table) -> None:
+    """
+    Test that a field equality condition (e.g., table.name == "Alice") filters records correctly.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     # Wrap the condition in Query so that it can be used without triggering
-    # implicit boolean conversion errors.
     condition = Query(table.name == "Alice")
     record = {"name": "Alice"}
     assert condition(record) is True
@@ -12,6 +16,11 @@ def test_field_equality(table: Table) -> None:
 
 
 def test_comparison_operators(table: Table) -> None:
+    """
+    Test all standard comparison operators (==, !=, <, <=, >, >=) on a table field.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     eq_cond = Query(table.age == 30)
     ne_cond = Query(table.age != 30)
     lt_cond = Query(table.age < 30)
@@ -37,6 +46,11 @@ def test_comparison_operators(table: Table) -> None:
 
 
 def test_logical_operators(table: Table) -> None:
+    """
+    Test logical AND, OR, and NOT operators when combining field conditions.
+
+    :param table: Table fixture prepopulated with test data.
+    """
     # Logical AND: (name == "Alice") AND (age > 25)
     condition = Query((table.name == "Alice") & (table.age > 25))
     record = {"name": "Alice", "age": 30}
