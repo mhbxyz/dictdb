@@ -1,4 +1,6 @@
-from .core import DictDB, Table, Query
+from .condition import Query
+from .table import Table
+from .database import DictDB
 from .exceptions import DuplicateKeyError, RecordNotFoundError, SchemaValidationError
 from .logging import logger, configure_logging
 

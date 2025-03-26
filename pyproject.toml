@@ -1,6 +1,7 @@
 [project]
 name = "dictdb"
 version = "0.1.0"
+author = "Manoah Bernier"
 description = "A Python package to manipulate dictionaries like databases."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -10,11 +11,25 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "coverage>=7.7.1",
     "mypy>=1.15.0",
     "pytest>=8.3.5",
+    "python-semantic-release>=9.21.0",
     "ruff>=0.11.2",
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "python-semantic-release>=9.21.0"]
 build-backend = "hatchling.build"
+
+[tool.semantic_release]
+version_variable = [
+    "pyproject.toml:version"
+]
+
+major_on_zero = true
+upload_to_pypi = true
+branch = "main"
+repository_platform = "github"
+version_source = "commit"
+changelog_file = "CHANGELOG.md"
