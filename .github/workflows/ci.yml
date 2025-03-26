@@ -39,7 +39,7 @@ jobs:
       # Enforce static type checks in 'dictdb' and 'tests' directories
       - name: Type check (mypy)
         run: |
-          uv run mypy --strict dictdb tests
+          uv run mypy --strict src/dictdb tests
 
       # Execute Pytest with coverage, then generate a coverage report
       - name: Test with Coverage
