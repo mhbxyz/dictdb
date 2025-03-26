@@ -5,9 +5,12 @@ from dictdb import Table, Query, DuplicateKeyError, RecordNotFoundError, SchemaV
 
 def test_insert_valid_record(table: Table) -> None:
     """
-    Test inserting a record with an explicit primary key.
+    Tests inserting a record with an explicit primary key.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     table.insert({"id": 3, "name": "Charlie", "age": 40})
     records = table.select()
@@ -16,9 +19,12 @@ def test_insert_valid_record(table: Table) -> None:
 
 def test_insert_auto_assign_primary_key(table: Table) -> None:
     """
-    Test inserting a record without a primary key and verifying auto-assignment of the key.
+    Tests inserting a record without a primary key, verifying auto-assignment of the key.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     new_record = {"name": "David", "age": 35}
     table.insert(new_record)
@@ -32,9 +38,12 @@ def test_insert_auto_assign_primary_key(table: Table) -> None:
 
 def test_insert_duplicate_key(table: Table) -> None:
     """
-    Test that inserting a record with a duplicate primary key raises a DuplicateKeyError.
+    Tests that inserting a record with a duplicate primary key raises DuplicateKeyError.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     with pytest.raises(DuplicateKeyError):
         table.insert({"id": 1, "name": "Eve", "age": 28})
@@ -42,9 +51,12 @@ def test_insert_duplicate_key(table: Table) -> None:
 
 def test_select_no_where(table: Table) -> None:
     """
-    Test selecting all records from a table without a condition.
+    Tests selecting all records from a table without a condition.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     records = table.select()
     assert len(records) == 2
@@ -52,9 +64,12 @@ def test_select_no_where(table: Table) -> None:
 
 def test_select_with_where(table: Table) -> None:
     """
-    Test selecting records from a table that match a specified condition.
+    Tests selecting records from a table that match a specified condition.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     condition = Query(table.name == "Alice")
     records = table.select(where=condition)
@@ -64,9 +79,12 @@ def test_select_with_where(table: Table) -> None:
 
 def test_select_with_columns(table: Table) -> None:
     """
-    Test selecting specific columns from records that satisfy a condition.
+    Tests selecting specific columns from records that satisfy a condition.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     records = table.select(columns=["name"], where=Query(table.age >= 25))
     for rec in records:
@@ -76,9 +94,12 @@ def test_select_with_columns(table: Table) -> None:
 
 def test_update_records(table: Table) -> None:
     """
-    Test updating records that match a condition.
+    Tests updating records that match a condition.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     updated = table.update({"age": 26}, where=Query(table.name == "Bob"))
     assert updated == 1
@@ -88,9 +109,12 @@ def test_update_records(table: Table) -> None:
 
 def test_update_no_match(table: Table) -> None:
     """
-    Test that an update on records with no matches raises RecordNotFoundError.
+    Tests that an update on records with no matches raises RecordNotFoundError.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     with pytest.raises(RecordNotFoundError):
         table.update({"age": 35}, where=Query(table.name == "Nonexistent"))
@@ -98,9 +122,12 @@ def test_update_no_match(table: Table) -> None:
 
 def test_delete_records(table: Table) -> None:
     """
-    Test deleting records that match a condition.
+    Tests deleting records that match a condition.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     deleted = table.delete(where=Query(table.name == "Bob"))
     assert deleted == 1
@@ -110,9 +137,12 @@ def test_delete_records(table: Table) -> None:
 
 def test_delete_no_match(table: Table) -> None:
     """
-    Test that a delete on records with no matches raises RecordNotFoundError.
+    Tests that deleting records with no matches raises RecordNotFoundError.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     with pytest.raises(RecordNotFoundError):
         table.delete(where=Query(table.name == "Nonexistent"))
@@ -120,7 +150,10 @@ def test_delete_no_match(table: Table) -> None:
 
 def test_insert_valid_record_with_schema() -> None:
     """
-    Test inserting a valid record into a table with a defined schema.
+    Tests inserting a valid record into a table with a defined schema.
+
+    :return: None
+    :rtype: None
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("schema_table", primary_key="id", schema=schema)
@@ -131,8 +164,10 @@ def test_insert_valid_record_with_schema() -> None:
 
 def test_insert_missing_field_in_schema() -> None:
     """
-    Test inserting a record missing a field defined in the schema.
-    Expect SchemaValidationError.
+    Tests that inserting a record missing a field defined in the schema raises SchemaValidationError.
+
+    :return: None
+    :rtype: None
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("schema_table", primary_key="id", schema=schema)
@@ -142,8 +177,10 @@ def test_insert_missing_field_in_schema() -> None:
 
 def test_insert_extra_field_not_in_schema() -> None:
     """
-    Test inserting a record containing extra fields not defined in the schema.
-    Expect a SchemaValidationError.
+    Tests that inserting a record containing extra fields not defined in the schema raises SchemaValidationError.
+
+    :return: None
+    :rtype: None
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("schema_table", primary_key="id", schema=schema)
@@ -153,8 +190,10 @@ def test_insert_extra_field_not_in_schema() -> None:
 
 def test_insert_wrong_type_field_in_schema() -> None:
     """
-    Test inserting a record with a field of the wrong type.
-    Expect a SchemaValidationError.
+    Tests that inserting a record with a field of the wrong type raises SchemaValidationError.
+
+    :return: None
+    :rtype: None
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("schema_table", primary_key="id", schema=schema)
@@ -164,7 +203,10 @@ def test_insert_wrong_type_field_in_schema() -> None:
 
 def test_auto_assign_primary_key_with_schema() -> None:
     """
-    Test auto-assigning a primary key in a table that has a defined schema.
+    Tests auto-assigning a primary key in a table with a defined schema.
+
+    :return: None
+    :rtype: None
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("schema_table", primary_key="id", schema=schema)
@@ -177,10 +219,12 @@ def test_auto_assign_primary_key_with_schema() -> None:
 
 def test_update_atomicity_partial_failure(monkeypatch):
     """
-    Test that if one record fails schema validation during an update, changes
-    to all other updated records are rolled back.
+    Tests that if one record fails schema validation during an update, all changes are rolled back.
 
     :param monkeypatch: Pytest fixture for dynamically modifying or mocking code.
+    :type monkeypatch: _pytest.monkeypatch.MonkeyPatch
+    :return: None
+    :rtype: None
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("atomic_test", primary_key="id", schema=schema)
@@ -213,7 +257,10 @@ def test_update_atomicity_partial_failure(monkeypatch):
 
 def test_update_atomicity_success():
     """
-    Test that a successful update applies to all matching records atomically.
+    Tests that a successful update applies to all matching records atomically.
+
+    :return: None
+    :rtype: None
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("atomic_success", primary_key="id", schema=schema)

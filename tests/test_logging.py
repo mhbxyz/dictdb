@@ -5,9 +5,12 @@ from dictdb import DictDB, configure_logging
 
 def test_configure_logging_no_file(capfd):
     """
-    Test configuring logging with only console output.
+    Tests configuring logging with only console output.
 
-    :param capfd: Pytest fixture that captures stdout and stderr.
+    :param capfd: Pytest fixture that captures stdout/stderr.
+    :type capfd: _pytest.capture.CaptureFixture
+    :return: None
+    :rtype: None
     """
     configure_logging(level="DEBUG", console=True, logfile=None)
 
@@ -24,9 +27,12 @@ def test_configure_logging_no_file(capfd):
 
 def test_configure_logging_with_file(tmp_path):
     """
-    Test that specifying a logfile writes logs to that file.
+    Tests that specifying a logfile writes logs to that file.
 
-    :param tmp_path: Pytest fixture providing a temporary directory unique to the test invocation.
+    :param tmp_path: A Pytest fixture providing a temporary directory.
+    :type tmp_path: pathlib.Path
+    :return: None
+    :rtype: None
     """
     log_file = tmp_path / "test_dictdb.log"
     configure_logging(level="DEBUG", console=False, logfile=str(log_file))
@@ -44,9 +50,12 @@ def test_configure_logging_with_file(tmp_path):
 
 def test_crud_logging_in_file(tmp_path):
     """
-    Test that CRUD operations produce the expected logs when directed to a log file.
+    Tests that CRUD operations produce the expected logs when directed to a log file.
 
-    :param tmp_path: Pytest fixture providing a temporary directory unique to the test invocation.
+    :param tmp_path: A Pytest fixture providing a temporary directory.
+    :type tmp_path: pathlib.Path
+    :return: None
+    :rtype: None
     """
     log_file = tmp_path / "crud_test.log"
     configure_logging(level="DEBUG", console=False, logfile=str(log_file))

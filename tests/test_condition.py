@@ -3,9 +3,12 @@ from dictdb import Table, Query
 
 def test_field_equality(table: Table) -> None:
     """
-    Test that a field equality condition (e.g., table.name == "Alice") filters records correctly.
+    Tests that a field equality condition (e.g., table.name == "Alice") filters records correctly.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     # Wrap the condition in Query so that it can be used without triggering
     condition = Query(table.name == "Alice")
@@ -17,9 +20,12 @@ def test_field_equality(table: Table) -> None:
 
 def test_comparison_operators(table: Table) -> None:
     """
-    Test all standard comparison operators (==, !=, <, <=, >, >=) on a table field.
+    Tests all standard comparison operators (==, !=, <, <=, >, >=) on a table field.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     eq_cond = Query(table.age == 30)
     ne_cond = Query(table.age != 30)
@@ -47,9 +53,12 @@ def test_comparison_operators(table: Table) -> None:
 
 def test_logical_operators(table: Table) -> None:
     """
-    Test logical AND, OR, and NOT operators when combining field conditions.
+    Tests logical AND, OR, and NOT operators when combining field conditions.
 
-    :param table: Table fixture prepopulated with test data.
+    :param table: A prepopulated Table fixture.
+    :type table: Table
+    :return: None
+    :rtype: None
     """
     # Logical AND: (name == "Alice") AND (age > 25)
     condition = Query((table.name == "Alice") & (table.age > 25))

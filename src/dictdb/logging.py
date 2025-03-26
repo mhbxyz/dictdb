@@ -8,10 +8,14 @@ def configure_logging(level: str = "INFO", console: bool = True, logfile: str = 
     """
     Configures Loguru logging for the DictDB.
 
-    Args:
-        level: The minimum log level for messages (e.g. "DEBUG", "INFO", "WARNING", etc.).
-        console: If True, logs will be printed to stdout.
-        logfile: If provided, logs will also be written to the given file path.
+    :param level: The minimum log level for messages (e.g., "DEBUG", "INFO", "WARNING", etc.).
+    :type level: str
+    :param console: If True, logs are printed to stdout.
+    :type console: bool
+    :param logfile: If provided, logs are also written to the given file path.
+    :type logfile: str or None
+    :return: None
+    :rtype: None
     """
     # Remove any pre-existing log handlers so we don't duplicate logs.
     logger.remove()

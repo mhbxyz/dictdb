@@ -7,32 +7,89 @@ from .logging import logger
 
 class Field:
     """
-    A helper class representing a field (column) in a table.
+    Represents a field (column) in a table and overloads comparison operators to produce Condition instances.
 
-    Overloads comparison operators to produce Condition instances.
-    This Field is created dynamically by the Table via attribute lookup.
+    Instances of Field are created dynamically by the Table via attribute lookup.
     """
 
     def __init__(self, table: "Table", name: str) -> None:
+        """
+        Initializes a Field tied to a specific table and field name.
+
+        :param table: The Table this field belongs to.
+        :type table: Table
+        :param name: The name of the field.
+        :type name: str
+        :return: None
+        :rtype: None
+        """
         self.table = table
         self.name = name
 
     def __eq__(self, other: Any) -> Condition:
+        """
+        Creates a Condition checking for equality.
+
+        :param other: A value to compare against.
+        :type other: Any
+        :return: A new Condition.
+        :rtype: Condition
+        """
         return Condition(lambda rec: rec.get(self.name) == other)
 
     def __ne__(self, other: Any) -> Condition:
+        """
+        Creates a Condition checking for inequality.
+
+        :param other: A value to compare against.
+        :type other: Any
+        :return: A new Condition.
+        :rtype: Condition
+        """
         return Condition(lambda rec: rec.get(self.name) != other)
 
     def __lt__(self, other: Any) -> Condition:
+        """
+        Creates a Condition checking for '<'.
+
+        :param other: A value to compare against.
+        :type other: Any
+        :return: A new Condition.
+        :rtype: Condition
+        """
         return Condition(lambda rec: rec.get(self.name) < other)
 
     def __le__(self, other: Any) -> Condition:
+        """
+        Creates a Condition checking for '<='.
+
+        :param other: A value to compare against.
+        :type other: Any
+        :return: A new Condition.
+        :rtype: Condition
+        """
         return Condition(lambda rec: rec.get(self.name) <= other)
 
     def __gt__(self, other: Any) -> Condition:
+        """
+        Creates a Condition checking for '>'.
+
+        :param other: A value to compare against.
+        :type other: Any
+        :return: A new Condition.
+        :rtype: Condition
+        """
         return Condition(lambda rec: rec.get(self.name) > other)
 
     def __ge__(self, other: Any) -> Condition:
+        """
+        Creates a Condition checking for '>='.
+
+        :param other: A value to compare against.
+        :type other: Any
+        :return: A new Condition.
+        :rtype: Condition
+        """
         return Condition(lambda rec: rec.get(self.name) >= other)
 
 
@@ -41,11 +98,22 @@ class Table:
     Represents a single table in the DictDB database.
 
     Provides SQL-like CRUD operations: INSERT, SELECT, UPDATE, and DELETE.
-    Also allows dynamic attribute access to fields so you can write conditions
-    like: where = Query(User.name == 'Alice')
+    Allows dynamic attribute access to fields for building conditions.
     """
 
     def __init__(self, name: str, primary_key: str = 'id', schema: Optional[Dict[str, type]] = None) -> None:
+        """
+        Initializes a new Table.
+
+        :param name: The name of the table.
+        :type name: str
+        :param primary_key: The field to use as the primary key.
+        :type primary_key: str
+        :param schema: An optional schema dict mapping field names to types.
+        :type schema: dict or None
+        :return: None
+        :rtype: None
+        """
         self.table_name: str = name  # Store the table name in table_name to free up 'name'
         self.primary_key: str = primary_key
         self.records: Dict[Any, Dict[str, Any]] = {}  # Maps primary key to record (dict)
@@ -58,8 +126,12 @@ class Table:
 
     def __getattr__(self, attr: str) -> Field:
         """
-        Allows dynamic attribute access to fields. For example, table.name will return
-        a Field object that can be used in query expressions.
+        Dynamically provides a Field object for the given attribute name.
+
+        :param attr: The field name.
+        :type attr: str
+        :return: A Field instance for use in conditions.
+        :rtype: Field
         """
         return Field(self, attr)
 
@@ -67,8 +139,11 @@ class Table:
         """
         Validates a record against the table's schema.
 
-        Raises:
-            SchemaValidationError: If the record does not conform to the schema.
+        :param record: The record to validate.
+        :type record: dict
+        :raises SchemaValidationError: If the record fails schema validation.
+        :return: None
+        :rtype: None
         """
         # Check that all schema-defined fields are present and have the correct type.
         for field, expected_type in self.schema.items():
@@ -85,18 +160,17 @@ class Table:
 
     def insert(self, record: Dict[str, Any]) -> None:
         """
-        Inserts a new record into the table, with schema validation if a schema is defined.
+        Inserts a new record into the table, with optional schema validation.
 
-        If the record does not contain the primary key, it automatically assigns the next available key.
-        If the record includes the primary key, it validates that no duplicate key exists.
-        Additionally, if a schema is defined, the record is validated against the schema.
+        Auto-assigns a primary key if one is not provided. Raises an error if
+        the primary key already exists.
 
-        Args:
-            record: The record to insert.
-
-        Raises:
-            DuplicateKeyError: If a record with the same primary key already exists.
-            SchemaValidationError: If the record does not match the defined schema.
+        :param record: The record to insert.
+        :type record: dict
+        :raises DuplicateKeyError: If a record with the same primary key exists.
+        :raises SchemaValidationError: If the record fails schema validation.
+        :return: None
+        :rtype: None
         """
         logger.debug(f"[INSERT] Attempting to insert record into '{self.table_name}': {record}")
         # Auto-generate primary key if not provided.
@@ -125,14 +199,14 @@ class Table:
             where: Optional[Query] = None
     ) -> List[Dict[str, Any]]:
         """
-        Retrieves records that match an optional condition.
+        Retrieves records matching an optional condition.
 
-        Args:
-            columns: List of fields to include in the output. If None, returns full records.
-            where: A function (or Query) to filter records.
-
-        Returns:
-            A list of matching records.
+        :param columns: List of fields to include in each returned record. If None, returns full records.
+        :type columns: list of str or None
+        :param where: A Query (or None) used to filter records.
+        :type where: Query or None
+        :return: A list of matching records.
+        :rtype: list of dict
         """
         logger.debug(f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}")
         results: List[Dict[str, Any]] = []
@@ -151,21 +225,18 @@ class Table:
             where: Optional[Query] = None
     ) -> int:
         """
-        Atomically updates records that satisfy the given condition.
-        If 'where' is omitted (None), all records in the table will be updated.
-        If an error occurs while updating any record (e.g., due to schema validation),
-        all changes made during this update operation are rolled back.
+        Updates records that satisfy the given condition, optionally validated against the schema.
 
-        Args:
-            changes: Field-value pairs to update.
-            where: A function (or Query) to determine which records to update.
+        If any record fails validation, all updates in this call are rolled back.
 
-        Returns:
-            The number of records updated.
-
-        Raises:
-            RecordNotFoundError: If no records match the update criteria.
-            Exception: Propagates any exception encountered during the update, after rolling back.
+        :param changes: Dictionary of field-value pairs to update.
+        :type changes: dict
+        :param where: A Query that determines which records to update. If None, all are updated.
+        :type where: Query or None
+        :raises RecordNotFoundError: If no records match the update criteria.
+        :raises Exception: If validation fails or any other error occurs, changes are rolled back.
+        :return: The number of records updated.
+        :rtype: int
         """
         logger.debug(f"[UPDATE] Attempting update in '{self.table_name}' with changes={changes}, where={where}")
         updated_keys = []
@@ -194,16 +265,13 @@ class Table:
 
     def delete(self, where: Optional[Query] = None) -> int:
         """
-        Deletes records that satisfy the given condition.
+        Deletes records matching the given condition.
 
-        Args:
-            where: A function (or Query) to determine which records to delete.
-
-        Returns:
-            The number of records deleted.
-
-        Raises:
-            RecordNotFoundError: If no records match the deletion criteria.
+        :param where: A Query that determines which records to delete. If None, all are deleted.
+        :type where: Query or None
+        :raises RecordNotFoundError: If no records match the deletion criteria.
+        :return: The number of records deleted.
+        :rtype: int
         """
         logger.debug(f"[DELETE] Attempting delete in '{self.table_name}' with where={where}")
         keys_to_delete = [key for key, record in self.records.items() if where is None or where(record)]
@@ -215,12 +283,18 @@ class Table:
 
     def copy(self) -> dict:
         """
-        Returns a shallow copy of all records in the table as a dictionary mapping primary keys to record copies.
+        Returns a shallow copy of all records in the table.
+
+        :return: A dict mapping primary keys to record copies.
+        :rtype: dict
         """
         return {key: record.copy() for key, record in self.records.items()}
 
     def all(self) -> list:
         """
         Returns a list of copies of all records in the table.
+
+        :return: A list of record copies.
+        :rtype: list
         """
         return [record.copy() for record in self.records.values()]
