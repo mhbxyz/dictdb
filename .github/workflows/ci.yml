@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-        # Checks out your code so that subsequent steps can access it
+      # Checks out your code so that subsequent steps can access it
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -21,28 +21,60 @@ jobs:
         with:
           python-version: '3.13'
 
-        # Install 'uv' so we can manage dependencies and commands with Astral/uv
+      # Install 'uv' so we can manage dependencies and commands with Astral/uv
       - name: Install uv
         run: |
           pip install uv
 
-        # Pull pinned dependencies defined in uv.lock
+      # Pull pinned dependencies defined in uv.lock
       - name: Sync with uv.lock
         run: |
           uv sync
 
-        # Run Ruff for code style and lint checks, targeting your src/dictdb directory
+      # Run Ruff for code style and lint checks, targeting your src/dictdb directory
       - name: Lint (Ruff)
         run: |
           uv run ruff check src/dictdb
 
-        # Enforce static type checks in 'dictdb' and 'tests' directories
+      # Enforce static type checks in 'dictdb' and 'tests' directories
       - name: Type check (mypy)
         run: |
           uv run mypy --strict dictdb tests
 
-        # Execute Pytest with coverage, then generate a coverage report
+      # Execute Pytest with coverage, then generate a coverage report
       - name: Test with Coverage
         run: |
           uv run coverage run -m pytest --maxfail=1 --disable-warnings
           uv run coverage report -m
+
+  release:
+    needs: [ lint-and-test ]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        run: |
+          pip install uv
+
+      - name: Sync with uv.lock
+        run: |
+          uv sync
+
+      - name: Semantic Release
+        run: |
+          semantic-release version
+          semantic-release changelog
+          semantic-release publish
+        env:
+          # Required for generating GitHub release
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required only if you set 'upload_to_pypi=true'
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
