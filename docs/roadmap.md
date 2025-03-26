@@ -1,4 +1,4 @@
-### Issue 1: Project Setup and Repository Structure
+~~### Issue 1: Project Setup and Repository Structure~~
 **Description:**  
 - **Repository Layout:**  
   - Create a clear project structure with directories such as `/src` for core code and `/tests` for unit/integration tests.  
@@ -13,7 +13,7 @@
 
 ---
 
-### Issue 2: API Design and SQL-Style CRUD Specification
+~~### Issue 2: API Design and SQL-Style CRUD Specification~~
 **Description:**  
 - **High-Level API:**  
   - Define a primary class (e.g., `DictDB`) that represents the in-memory database.  
@@ -32,7 +32,7 @@
 
 ---
 
-### Issue 3: Core SQL-Style CRUD Operations Implementation
+~~### Issue 3: Core SQL-Style CRUD Operations Implementation~~
 **Description:**  
 - **INSERT Operation:**  
   - Implement record insertion with schema validation (if a schema is defined).  
@@ -53,7 +53,7 @@
 
 ---
 
-### Issue 4: SQL Query Parser and Execution Engine
+~~### Issue 4: SQL Query Parser and Execution Engine~~
 **Description:**  
 - **Parser Development:**  
   - Design a lightweight SQL parser that converts SQL-like strings into executable operations on the dictionary.  
@@ -67,7 +67,7 @@
 - **Testing:**  
   - Write comprehensive tests with various SQL queries to ensure correct parsing and execution.
 
-**Tags:** `feature`, `SQL-parser`, `query-engine`  
+**Tags:** `feature`, `SQL-parser`, `deferred`, `query-engine`  
 **Milestone:** *v0.2 Query Support*
 
 ---
@@ -126,7 +126,7 @@
 
 ---
 
-### Issue 8: Error Handling, Logging, and SQL Error Emulation
+~~### Issue 8: Error Handling, Logging, and SQL Error Emulation~~
 **Description:**  
 - **Standardized Errors:**  
   - Define custom exception classes that mimic SQL error codes (e.g., integrity constraint violations, syntax errors).  
