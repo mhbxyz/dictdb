@@ -29,6 +29,7 @@ Usage Example:
 
 from typing import Any, Callable, Dict, List, Optional, Union
 
+from .logging import logger
 from .exceptions import DuplicateKeyError, RecordNotFoundError, SchemaValidationError
 
 # Type alias for a predicate function that takes a record (dict) and returns a bool.
@@ -193,6 +194,7 @@ class Table:
             DuplicateKeyError: If a record with the same primary key already exists.
             SchemaValidationError: If the record does not match the defined schema.
         """
+        logger.debug(f"[INSERT] Attempting to insert record into '{self.table_name}': {record}")
         # Auto-generate primary key if not provided.
         if self.primary_key not in record:
             if self.records:
@@ -228,6 +230,7 @@ class Table:
         Returns:
             A list of matching records.
         """
+        logger.debug(f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}")
         results: List[Dict[str, Any]] = []
         for record in self.records.values():
             if where is None or where(record):
@@ -260,6 +263,7 @@ class Table:
             RecordNotFoundError: If no records match the update criteria.
             Exception: Propagates any exception encountered during the update, after rolling back.
         """
+        logger.debug(f"[UPDATE] Attempting update in '{self.table_name}' with changes={changes}, where={where}")
         updated_keys = []
         backup = {}
         updated_count = 0
@@ -297,6 +301,7 @@ class Table:
         Raises:
             RecordNotFoundError: If no records match the deletion criteria.
         """
+        logger.debug(f"[DELETE] Attempting delete in '{self.table_name}' with where={where}")
         keys_to_delete = [key for key, record in self.records.items() if where is None or where(record)]
         for key in keys_to_delete:
             del self.records[key]
@@ -326,6 +331,7 @@ class DictDB:
 
     def __init__(self) -> None:
         self.tables: Dict[str, Table] = {}
+        logger.info("Initialized an empty DictDB instance.")
 
     def create_table(self, table_name: str, primary_key: str = 'id') -> None:
         """
@@ -338,6 +344,7 @@ class DictDB:
         Raises:
             ValueError: If the table already exists.
         """
+        logger.debug(f"[DictDB] Creating table '{table_name}' with primary key '{primary_key}'.")
         if table_name in self.tables:
             raise ValueError(f"Table '{table_name}' already exists.")
         self.tables[table_name] = Table(table_name, primary_key)
@@ -352,6 +359,7 @@ class DictDB:
         Raises:
             ValueError: If the table does not exist.
         """
+        logger.debug(f"[DictDB] Dropping table '{table_name}'.")
         if table_name not in self.tables:
             raise ValueError(f"Table '{table_name}' does not exist.")
         del self.tables[table_name]
@@ -369,6 +377,7 @@ class DictDB:
         Raises:
             ValueError: If the table does not exist.
         """
+        logger.debug(f"[DictDB] Retrieving table '{table_name}'.")
         if table_name not in self.tables:
             raise ValueError(f"Table '{table_name}' does not exist.")
         return self.tables[table_name]
@@ -380,4 +389,5 @@ class DictDB:
         Returns:
             A list of table names.
         """
+        logger.debug("[DictDB] Listing all tables.")
         return list(self.tables.keys())
