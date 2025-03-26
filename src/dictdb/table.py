@@ -1,10 +1,8 @@
-from typing import Union, Any, Optional, Dict, List
+from typing import Any, Optional, Dict, List
 
 from .exceptions import SchemaValidationError, DuplicateKeyError, RecordNotFoundError
-from .condition import Predicate, Condition
+from .condition import Condition, Query
 from .logging import logger
-
-WherePredicate = Union[Predicate, "Query"]
 
 
 class Field:
@@ -124,7 +122,7 @@ class Table:
     def select(
             self,
             columns: Optional[List[str]] = None,
-            where: Optional[WherePredicate] = None
+            where: Optional[Query] = None
     ) -> List[Dict[str, Any]]:
         """
         Retrieves records that match an optional condition.
@@ -150,7 +148,7 @@ class Table:
     def update(
             self,
             changes: Dict[str, Any],
-            where: Optional[WherePredicate] = None
+            where: Optional[Query] = None
     ) -> int:
         """
         Atomically updates records that satisfy the given condition.
@@ -194,7 +192,7 @@ class Table:
 
         return updated_count
 
-    def delete(self, where: Optional[WherePredicate] = None) -> int:
+    def delete(self, where: Optional[Query] = None) -> int:
         """
         Deletes records that satisfy the given condition.
 

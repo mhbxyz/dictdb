@@ -282,7 +282,7 @@ def test_update_atomicity_success():
     table.insert({"id": 1, "name": "Alice", "age": 30})
     table.insert({"id": 2, "name": "Bob", "age": 25})
 
-    updated = table.update({"age": 40}, where=lambda r: True)
+    updated = table.update({"age": 40})
     assert updated == 2
 
     # Verify that the update was applied.

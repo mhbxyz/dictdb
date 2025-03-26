@@ -50,7 +50,12 @@ class Query:
         Query((table.name == "Alice") & (table.age > 25))
     """
 
-    def __init__(self, condition: Condition | bool) -> None:
+    def __init__(self, condition: Any) -> None:
+        if not isinstance(condition, Condition):
+            raise TypeError(
+                "Argument 'condition' must be an instance of Condition "
+                "(e.g., Query(Table.field == value)."
+            )
         self.condition: Condition = condition
 
     def __call__(self, record: Dict[str, Any]) -> bool:
