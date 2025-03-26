@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 import pytest
 
 from dictdb import Table, Query, DuplicateKeyError, RecordNotFoundError, SchemaValidationError
@@ -217,7 +219,7 @@ def test_auto_assign_primary_key_with_schema() -> None:
     assert len(records) == 1
 
 
-def test_update_atomicity_partial_failure(monkeypatch):
+def test_update_atomicity_partial_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Tests that if one record fails schema validation during an update, all changes are rolled back.
 
@@ -238,7 +240,7 @@ def test_update_atomicity_partial_failure(monkeypatch):
     original_validate = table.validate_record
 
     # Monkeypatch validate_record to simulate a failure for record with id 2.
-    def fake_validate(record):
+    def fake_validate(record: Dict[str, Any]) -> None:
         if record["id"] == 2:
             raise SchemaValidationError("Simulated failure for record 2")
         else:
@@ -255,7 +257,7 @@ def test_update_atomicity_partial_failure(monkeypatch):
         assert table.copy()[key] == original
 
 
-def test_update_atomicity_success():
+def test_update_atomicity_success() -> None:
     """
     Tests that a successful update applies to all matching records atomically.
 

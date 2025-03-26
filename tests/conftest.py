@@ -1,3 +1,5 @@
+from typing import List, Iterator
+
 import pytest
 from dictdb import DictDB, Table, logger
 
@@ -29,7 +31,7 @@ def db() -> DictDB:
     return database
 
 @pytest.fixture
-def log_capture():
+def log_capture() -> Iterator[List[str]]:
     """
     Creates a fixture that captures Loguru log messages in a list.
 
@@ -40,7 +42,7 @@ def log_capture():
     """
     logs = []
 
-    def sink_function(message):
+    def sink_function(message: str) -> None:
         # Each 'message' here is a loguru Message object in string form
         logs.append(str(message))
 

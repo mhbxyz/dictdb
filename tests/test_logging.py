@@ -1,9 +1,12 @@
 import os
+from pathlib import Path
+
+from _pytest.capture import CaptureFixture
 
 from dictdb import DictDB, configure_logging
 
 
-def test_configure_logging_no_file(capfd):
+def test_configure_logging_no_file(capfd: CaptureFixture[str]) -> None:
     """
     Tests configuring logging with only console output.
 
@@ -25,7 +28,7 @@ def test_configure_logging_no_file(capfd):
         "Expected console log about initializing DictDB not found."
 
 
-def test_configure_logging_with_file(tmp_path):
+def test_configure_logging_with_file(tmp_path: Path) -> None:
     """
     Tests that specifying a logfile writes logs to that file.
 
@@ -48,7 +51,7 @@ def test_configure_logging_with_file(tmp_path):
         "Expected log line not found in the output file."
 
 
-def test_crud_logging_in_file(tmp_path):
+def test_crud_logging_in_file(tmp_path: Path) -> None:
     """
     Tests that CRUD operations produce the expected logs when directed to a log file.
 

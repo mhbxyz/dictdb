@@ -1,10 +1,12 @@
-# dictdb/logging.py
-
 import sys
+from typing import Optional
+
 from loguru import logger
 
+__all__ = ["logger", "configure_logging"]
 
-def configure_logging(level: str = "INFO", console: bool = True, logfile: str = None) -> None:
+
+def configure_logging(level: str = "INFO", console: bool = True, logfile: Optional[str] = None) -> None:
     """
     Configures Loguru logging for the DictDB.
 

@@ -26,7 +26,7 @@ class Field:
         self.table = table
         self.name = name
 
-    def __eq__(self, other: Any) -> Condition:
+    def __eq__(self, other: Any) -> Condition:  # type: ignore[override]
         """
         Creates a Condition checking for equality.
 
@@ -37,7 +37,7 @@ class Field:
         """
         return Condition(lambda rec: rec.get(self.name) == other)
 
-    def __ne__(self, other: Any) -> Condition:
+    def __ne__(self, other: Any) -> Condition:  # type: ignore[override]
         """
         Creates a Condition checking for inequality.
 
@@ -145,6 +145,10 @@ class Table:
         :return: None
         :rtype: None
         """
+        if self.schema is None:
+            # No schema means no validation is performed.
+            return
+
         # Check that all schema-defined fields are present and have the correct type.
         for field, expected_type in self.schema.items():
             if field not in record:
@@ -281,7 +285,7 @@ class Table:
             raise RecordNotFoundError(f"No records match the deletion criteria in table '{self.table_name}'.")
         return len(keys_to_delete)
 
-    def copy(self) -> dict:
+    def copy(self) -> Dict[Any, Dict[str, Any]]:
         """
         Returns a shallow copy of all records in the table.
 
@@ -290,7 +294,7 @@ class Table:
         """
         return {key: record.copy() for key, record in self.records.items()}
 
-    def all(self) -> list:
+    def all(self) -> List[Dict[str, Any]]:
         """
         Returns a list of copies of all records in the table.
 
