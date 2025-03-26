@@ -1,4 +1,14 @@
 from .core import DictDB, Table, Query
 from .exceptions import DuplicateKeyError, RecordNotFoundError, SchemaValidationError
+from .logging import logger, configure_logging
 
-__all__ = ['DictDB', 'Table', 'Query', 'DuplicateKeyError', 'RecordNotFoundError', 'SchemaValidationError']
+__all__ = [
+    'DictDB',
+    'Table',
+    'Query',
+    'DuplicateKeyError',
+    'RecordNotFoundError',
+    'SchemaValidationError',
+    'logger',
+    'configure_logging'
+]

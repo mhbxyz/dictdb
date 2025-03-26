@@ -1,5 +1,5 @@
 import pytest
-from dictdb import DictDB, Table
+from dictdb import DictDB, Table, logger
 
 @pytest.fixture
 def table() -> Table:
@@ -21,3 +21,26 @@ def db() -> DictDB:
     database.create_table("users")
     database.create_table("products")
     return database
+
+@pytest.fixture
+def log_capture():
+    """
+    Creates a fixture that captures Loguru log messages in a list, which test
+    functions can then inspect to verify that expected logs occurred.
+    """
+    logs = []
+
+    def sink_function(message):
+        # Each 'message' here is a loguru Message object in string form
+        logs.append(str(message))
+
+    # Remove existing sinks to avoid duplicates (important for test isolation).
+    logger.remove()
+
+    # Add the capture sink at a high level (e.g. DEBUG) so we see everything.
+    logger.add(sink_function, level="DEBUG")
+
+    yield logs
+
+    # Remove the capture sink after test completes (cleanup).
+    logger.remove()
