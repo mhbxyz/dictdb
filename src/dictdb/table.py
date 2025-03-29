@@ -1,4 +1,5 @@
-from typing import Any, Optional, Dict, List
+import operator
+from typing import Any, Optional, Dict, List, Callable
 
 from .exceptions import SchemaValidationError, DuplicateKeyError, RecordNotFoundError
 from .condition import Condition, Query
@@ -6,9 +7,43 @@ from .logging import logger
 from .types import Record, Schema
 
 
+class _FieldCondition:
+    """
+    A callable class representing a condition on a field.
+
+    It encapsulates the field name, a value to compare, and an operator function.
+    """
+    def __init__(self, field: str, value: Any, op: Callable[[Any, Any], bool]) -> None:
+        """
+        Initializes a _FieldCondition instance.
+
+        :param field: The name of the field.
+        :type field: str
+        :param value: The value to compare against.
+        :type value: Any
+        :param op: A binary operator function (e.g., operator.eq, operator.lt).
+        :type op: Callable[[Any, Any], bool]
+        """
+        self.field = field
+        self.value = value
+        self.op = op
+
+    def __call__(self, record: Dict[str, Any]) -> bool:
+        """
+        Evaluates the condition on the given record.
+
+        :param record: The record (dictionary) to evaluate.
+        :type record: dict
+        :return: True if the condition is satisfied; otherwise False.
+        :rtype: bool
+        """
+        return self.op(record.get(self.field), self.value)
+
+
 class Field:
     """
-    Represents a field (column) in a table and overloads comparison operators to produce Condition instances.
+    Represents a field (column) in a table and overloads comparison operators
+    to produce Condition instances.
 
     Instances of Field are created dynamically by the Table via attribute lookup.
     """
@@ -21,8 +56,6 @@ class Field:
         :type table: Table
         :param name: The name of the field.
         :type name: str
-        :return: None
-        :rtype: None
         """
         self.table = table
         self.name = name
@@ -33,10 +66,9 @@ class Field:
 
         :param other: A value to compare against.
         :type other: Any
-        :return: A new Condition.
-        :rtype: Condition
+        :return: A Condition instance.
         """
-        return Condition(lambda rec: rec.get(self.name) == other)
+        return Condition(_FieldCondition(self.name, other, operator.eq))
 
     def __ne__(self, other: Any) -> Condition:  # type: ignore[override]
         """
@@ -44,54 +76,49 @@ class Field:
 
         :param other: A value to compare against.
         :type other: Any
-        :return: A new Condition.
-        :rtype: Condition
+        :return: A Condition instance.
         """
-        return Condition(lambda rec: rec.get(self.name) != other)
+        return Condition(_FieldCondition(self.name, other, operator.ne))
 
     def __lt__(self, other: Any) -> Condition:
         """
-        Creates a Condition checking for '<'.
+        Creates a Condition checking for less-than.
 
         :param other: A value to compare against.
         :type other: Any
-        :return: A new Condition.
-        :rtype: Condition
+        :return: A Condition instance.
         """
-        return Condition(lambda rec: rec.get(self.name) < other)
+        return Condition(_FieldCondition(self.name, other, operator.lt))
 
     def __le__(self, other: Any) -> Condition:
         """
-        Creates a Condition checking for '<='.
+        Creates a Condition checking for less-than-or-equal.
 
         :param other: A value to compare against.
         :type other: Any
-        :return: A new Condition.
-        :rtype: Condition
+        :return: A Condition instance.
         """
-        return Condition(lambda rec: rec.get(self.name) <= other)
+        return Condition(_FieldCondition(self.name, other, operator.le))
 
     def __gt__(self, other: Any) -> Condition:
         """
-        Creates a Condition checking for '>'.
+        Creates a Condition checking for greater-than.
 
         :param other: A value to compare against.
         :type other: Any
-        :return: A new Condition.
-        :rtype: Condition
+        :return: A Condition instance.
         """
-        return Condition(lambda rec: rec.get(self.name) > other)
+        return Condition(_FieldCondition(self.name, other, operator.gt))
 
     def __ge__(self, other: Any) -> Condition:
         """
-        Creates a Condition checking for '>='.
+        Creates a Condition checking for greater-than-or-equal.
 
         :param other: A value to compare against.
         :type other: Any
-        :return: A new Condition.
-        :rtype: Condition
+        :return: A Condition instance.
         """
-        return Condition(lambda rec: rec.get(self.name) >= other)
+        return Condition(_FieldCondition(self.name, other, operator.ge))
 
 
 class Table:
@@ -135,6 +162,27 @@ class Table:
         :rtype: Field
         """
         return Field(self, attr)
+
+    def __getstate__(self) -> Dict[str, Any]:
+        """
+        Returns the state of the Table instance for pickling.
+        Only include core attributes to avoid pickling dynamically generated objects.
+        """
+        return {
+            "table_name": self.table_name,
+            "primary_key": self.primary_key,
+            "records": self.records,
+            "schema": self.schema,
+        }
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        """
+        Restores the state of the Table instance from the pickled state.
+        """
+        self.table_name = state["table_name"]
+        self.primary_key = state["primary_key"]
+        self.records = state["records"]
+        self.schema = state["schema"]
 
     def validate_record(self, record: Record) -> None:
         """

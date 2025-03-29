@@ -1,3 +1,4 @@
+from .backup import BackupManager
 from .condition import Query
 from .table import Table
 from .database import DictDB
@@ -12,5 +13,6 @@ __all__ = [
     'RecordNotFoundError',
     'SchemaValidationError',
     'logger',
-    'configure_logging'
+    'configure_logging',
+    'BackupManager'
 ]
