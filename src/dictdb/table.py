@@ -1,5 +1,5 @@
 import operator
-from typing import Any, Optional, Dict, List, Callable
+from typing import Any, Optional, Dict, List, Callable, Set, cast
 
 from .exceptions import SchemaValidationError, DuplicateKeyError, RecordNotFoundError
 from .condition import Condition, Query
@@ -18,15 +18,12 @@ class _FieldCondition:
         Initializes a _FieldCondition instance.
 
         :param field: The name of the field.
-        :type field: str
         :param value: The value to compare against.
-        :type value: Any
         :param op: A binary operator function (e.g., operator.eq, operator.lt).
-        :type op: Callable[[Any, Any], bool]
         """
-        self.field = field
-        self.value = value
-        self.op = op
+        self.field: str = field
+        self.value: Any = value
+        self.op: Callable[[Any, Any], bool] = op
 
     def __call__(self, record: Dict[str, Any]) -> bool:
         """
@@ -126,40 +123,34 @@ class Table:
     Represents a single table in the DictDB database.
 
     Provides SQL-like CRUD operations: INSERT, SELECT, UPDATE, and DELETE.
-    Allows dynamic attribute access to fields for building conditions.
+    Supports dynamic attribute access to fields for building conditions and
+    allows creation of indexes on specific fields for query acceleration.
     """
-
     def __init__(self, name: str, primary_key: str = 'id', schema: Optional[Schema] = None) -> None:
         """
         Initializes a new Table.
 
         :param name: The name of the table.
-        :type name: str
         :param primary_key: The field to use as the primary key.
-        :type primary_key: str
         :param schema: An optional schema dict mapping field names to types.
-        :type schema: dict or None
-        :return: None
-        :rtype: None
         """
-        self.table_name: str = name  # Store the table name in table_name to free up 'name'
+        self.table_name: str = name  # Stored as table_name to free up 'name'
         self.primary_key: str = primary_key
         self.records: Dict[Any, Record] = {}  # Maps primary key to record (dict)
         self.schema = schema
         if self.schema is not None:
-            # Ensure that the primary key is part of the schema.
             if self.primary_key not in self.schema:
-                # Auto-add primary key to schema with type int.
                 self.schema[self.primary_key] = int
+        # Dictionary to store indexes:
+        # Maps field name to a dict mapping field value to a set of primary keys.
+        self.indexes: Dict[str, Dict[Any, Set[Any]]] = {}
 
     def __getattr__(self, attr: str) -> Field:
         """
         Dynamically provides a Field object for the given attribute name.
 
         :param attr: The field name.
-        :type attr: str
         :return: A Field instance for use in conditions.
-        :rtype: Field
         """
         return Field(self, attr)
 
@@ -173,6 +164,7 @@ class Table:
             "primary_key": self.primary_key,
             "records": self.records,
             "schema": self.schema,
+            # Note: indexes are not pickled; they can be recreated if needed.
         }
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
@@ -183,22 +175,97 @@ class Table:
         self.primary_key = state["primary_key"]
         self.records = state["records"]
         self.schema = state["schema"]
+        self.indexes = {}
+
+    def create_index(self, field: str) -> None:
+        """
+        Creates an index on the specified field.
+
+        The index is a mapping from field values to a set of primary keys
+        of records containing that value.
+
+        :param field: The field name on which to create an index.
+        """
+        if field in self.indexes:
+            # Index already exists.
+            return
+        index: Dict[Any, Set[Any]] = {}
+        for pk, record in self.records.items():
+            if field in record:
+                value = record[field]
+                index.setdefault(value, set()).add(pk)
+        self.indexes[field] = index
+        logger.debug(f"[INDEX] Created index on field '{field}' for table '{self.table_name}'.")
+
+    def _update_indexes_on_insert(self, record: Record) -> None:
+        """
+        Updates all indexes with the newly inserted record.
+
+        :param record: The record that was inserted.
+        """
+        pk = record[self.primary_key]
+        for field, index in self.indexes.items():
+            if field in record:
+                value = record[field]
+                index.setdefault(value, set()).add(pk)
+
+    def _update_indexes_on_update(self, pk: Any, old_record: Record, new_record: Record) -> None:
+        """
+        Updates indexes for a record that has been updated.
+
+        :param pk: The primary key of the updated record.
+        :param old_record: The record's state before the update.
+        :param new_record: The record's state after the update.
+        """
+        for field, index in self.indexes.items():
+            old_value = old_record.get(field)
+            new_value = new_record.get(field)
+            if old_value == new_value:
+                continue
+            if old_value in index:
+                index[old_value].discard(pk)
+                if not index[old_value]:
+                    del index[old_value]
+            if new_value is not None:
+                index.setdefault(new_value, set()).add(pk)
+
+    def _update_indexes_on_delete(self, record: Record) -> None:
+        """
+        Removes the record from all indexes when it is deleted.
+
+        :param record: The record to remove from indexes.
+        """
+        pk = record[self.primary_key]
+        for field, index in self.indexes.items():
+            if field in record:
+                value = record[field]
+                if value in index:
+                    index[value].discard(pk)
+                    if not index[value]:
+                        del index[value]
+
+    def _is_indexed_eq_condition(self, where: Query) -> bool:
+        """
+        Determines if the provided Query represents a simple equality condition
+        on an indexed field.
+
+        :param where: The Query condition.
+        :return: True if the condition is a simple equality on an indexed field.
+        """
+        func = cast(_FieldCondition, where.condition.func)
+        if func.op == operator.eq and func.field in self.indexes:
+            return True
+        return False
 
     def validate_record(self, record: Record) -> None:
         """
         Validates a record against the table's schema.
 
         :param record: The record to validate.
-        :type record: dict
         :raises SchemaValidationError: If the record fails schema validation.
-        :return: None
-        :rtype: None
         """
         if self.schema is None:
-            # No schema means no validation is performed.
             return
-
-        # Check that all schema-defined fields are present and have the correct type.
         for field, expected_type in self.schema.items():
             if field not in record:
                 raise SchemaValidationError(f"Missing field '{field}' as defined in schema.")
@@ -206,7 +273,6 @@ class Table:
                 raise SchemaValidationError(
                     f"Field '{field}' expects type '{expected_type.__name__}', got '{type(record[field]).__name__}'."
                 )
-        # Optionally, enforce that no extra fields are present.
         for field in record.keys():
             if field not in self.schema:
                 raise SchemaValidationError(f"Field '{field}' is not defined in the schema.")
@@ -215,55 +281,47 @@ class Table:
         """
         Inserts a new record into the table, with optional schema validation.
 
-        Auto-assigns a primary key if one is not provided. Raises an error if
-        the primary key already exists.
+        Auto-assigns a primary key if not provided. Updates indexes automatically.
 
         :param record: The record to insert.
-        :type record: dict
         :raises DuplicateKeyError: If a record with the same primary key exists.
         :raises SchemaValidationError: If the record fails schema validation.
-        :return: None
-        :rtype: None
         """
         logger.debug(f"[INSERT] Attempting to insert record into '{self.table_name}': {record}")
-        # Auto-generate primary key if not provided.
         if self.primary_key not in record:
-            if self.records:
-                new_key = max(self.records.keys()) + 1
-            else:
-                new_key = 1
+            new_key = max(self.records.keys()) + 1 if self.records else 1
             record[self.primary_key] = new_key
         else:
             key = record[self.primary_key]
             if key in self.records:
-                raise DuplicateKeyError(
-                    f"Record with key '{key}' already exists in table '{self.table_name}'."
-                )
-
-        # If a schema is defined, validate the record.
+                raise DuplicateKeyError(f"Record with key '{key}' already exists in table '{self.table_name}'.")
         if self.schema is not None:
             self.validate_record(record)
-
         self.records[record[self.primary_key]] = record
+        self._update_indexes_on_insert(record)
 
-    def select(
-            self,
-            columns: Optional[List[str]] = None,
-            where: Optional[Query] = None
-    ) -> List[Record]:
+    def select(self, columns: Optional[List[str]] = None, where: Optional[Query] = None) -> List[Record]:
         """
         Retrieves records matching an optional condition.
 
+        If the condition is a simple equality on an indexed field, the index is used.
+
         :param columns: List of fields to include in each returned record. If None, returns full records.
-        :type columns: list of str or None
-        :param where: A Query (or None) used to filter records.
-        :type where: Query or None
+        :param where: A Query used to filter records.
         :return: A list of matching records.
-        :rtype: list of dict
         """
         logger.debug(f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}")
         results: List[Record] = []
-        for record in self.records.values():
+        if where is not None and self._is_indexed_eq_condition(where):
+            condition = cast(_FieldCondition, where.condition.func)
+            field: str = condition.field
+            value: Any = condition.value
+            pks = self.indexes.get(field, {}).get(value, set())
+            candidate_records = [self.records[pk] for pk in pks]
+        else:
+            candidate_records = list(self.records.values())
+
+        for record in candidate_records:
             if where is None or where(record):
                 if columns:
                     filtered = {col: record.get(col) for col in columns}
@@ -272,66 +330,58 @@ class Table:
                     results.append(record)
         return results
 
-    def update(
-            self,
-            changes: Record,
-            where: Optional[Query] = None
-    ) -> int:
+    def update(self, changes: Record, where: Optional[Query] = None) -> int:
         """
-        Updates records that satisfy the given condition, optionally validated against the schema.
-
-        If any record fails validation, all updates in this call are rolled back.
+        Updates records that satisfy the given condition. The operation is atomic:
+        if any record fails validation, all changes are rolled back.
+        Indexes are updated automatically.
 
         :param changes: Dictionary of field-value pairs to update.
-        :type changes: dict
-        :param where: A Query that determines which records to update. If None, all are updated.
-        :type where: Query or None
-        :raises RecordNotFoundError: If no records match the update criteria.
-        :raises Exception: If validation fails or any other error occurs, changes are rolled back.
+        :param where: A Query that determines which records to update.
+        :raises RecordNotFoundError: If no records match the criteria.
+        :raises Exception: If validation fails, all changes are rolled back.
         :return: The number of records updated.
-        :rtype: int
         """
         logger.debug(f"[UPDATE] Attempting update in '{self.table_name}' with changes={changes}, where={where}")
-        updated_keys = []
-        backup = {}
+        updated_keys: List[Any] = []
+        backup: Dict[Any, Record] = {}
         updated_count = 0
         try:
             for key, record in self.records.items():
                 if where is None or where(record):
                     backup[key] = record.copy()
-                    # Mark the record for rollback immediately.
                     updated_keys.append(key)
                     record.update(changes)
                     if self.schema is not None:
                         self.validate_record(record)
                     updated_count += 1
-
             if updated_count == 0:
                 raise RecordNotFoundError(f"No records match the update criteria in table '{self.table_name}'.")
         except Exception as e:
-            # Roll back all changes for records that were attempted to be updated.
             for key in updated_keys:
                 self.records[key] = backup[key]
             raise e
 
+        for pk in updated_keys:
+            self._update_indexes_on_update(pk, backup[pk], self.records[pk])
         return updated_count
 
     def delete(self, where: Optional[Query] = None) -> int:
         """
-        Deletes records matching the given condition.
+        Deletes records matching the given condition. Indexes are updated automatically.
 
-        :param where: A Query that determines which records to delete. If None, all are deleted.
-        :type where: Query or None
-        :raises RecordNotFoundError: If no records match the deletion criteria.
+        :param where: A Query that determines which records to delete.
+        :raises RecordNotFoundError: If no records match the criteria.
         :return: The number of records deleted.
-        :rtype: int
         """
         logger.debug(f"[DELETE] Attempting delete in '{self.table_name}' with where={where}")
         keys_to_delete = [key for key, record in self.records.items() if where is None or where(record)]
-        for key in keys_to_delete:
-            del self.records[key]
         if not keys_to_delete:
             raise RecordNotFoundError(f"No records match the deletion criteria in table '{self.table_name}'.")
+        for key in keys_to_delete:
+            record = self.records[key]
+            self._update_indexes_on_delete(record)
+            del self.records[key]
         return len(keys_to_delete)
 
     def copy(self) -> Dict[Any, Record]:
