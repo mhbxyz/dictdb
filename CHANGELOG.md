@@ -1,6 +1,57 @@
 # CHANGELOG
 
 
+## v1.1.0 (2025-03-29)
+
+### Documentation
+
+- Add project logo to README.md
+  ([`9b5ff9c`](https://github.com/mhbxyz/dictdb/commit/9b5ff9cdf6fdef139b899b727a22d6a1fb26bb4d))
+
+- Add the project logo
+  ([`965a44e`](https://github.com/mhbxyz/dictdb/commit/965a44ecda6f5997b60e900cc6daa5bfd665819e))
+
+- Update documentation to remove useless line
+  ([`5968ed0`](https://github.com/mhbxyz/dictdb/commit/5968ed0711431a65fc6676a99436ef531aaebca0))
+
+### Features
+
+- **persistence**: Add an automatic backup system that saves the current state of the database
+  either periodically or immediately after significant changes
+  ([`32647a8`](https://github.com/mhbxyz/dictdb/commit/32647a86da0ef3e390334f5df9a500f99b9e38d5))
+
+The changes introducing an automatic backup system for DictDB. A new module,`backup.py`, defines a
+  `BackupManager` that starts a background thread to periodically back up the database and also
+  provides a manual trigger via `notify_change()`. Unit tests in `test_backup.py` verify both
+  periodic and manual backup functionality.
+
+- **persistence**: Add asynchronous save/load methods
+  ([`974036d`](https://github.com/mhbxyz/dictdb/commit/974036deba9d44defca22acbc801ae2f141ca339))
+
+Implemented async_save and async_load in DictDB using asyncio.to_thread to offload file I/O,
+  ensuring that persistence operations do not block ongoing database activities. Updated
+  documentation and unit tests (test_persistence.py) to cover asynchronous JSON and pickle
+  operations.
+
+- **persistence**: Add save/load functionality with pathlib support
+  ([`149f471`](https://github.com/mhbxyz/dictdb/commit/149f471a3d978cea39f5caf1fed5341a6cc74df8))
+
+- Implemented `save(filename: Union[str, Path], file_format: str)` and `load(filename: Union[str,
+  Path], file_format: str)` in database.py. - Updated Table class with __getstate__ and __setstate__
+  to exclude dynamic attributes from pickled state. - Refactored Field class to use a top-level
+  _FieldCondition (with operator functions) ensuring picklability. - Updated relevant unit tests to
+  cover persistence functionality.
+
+### Testing
+
+- **persistence**: Validate consistency across multiple save/load cycles
+  ([`4054721`](https://github.com/mhbxyz/dictdb/commit/4054721e4a93fdcd52d5bc778f4a896371f6a383))
+
+Added a new unit test in test_persistence.py to verify that DictDB maintains a consistent state
+  across multiple save/load cycles using JSON persistence. This test saves and reloads the database
+  repeatedly and compares the final state with the original.
+
+
 ## v1.0.0 (2025-03-26)
 
 ### Bug Fixes
