@@ -1,3 +1,4 @@
+import asyncio
 import json
 import pickle
 from pathlib import Path
@@ -191,3 +192,37 @@ class DictDB:
                 return cast(DictDB, db)
             case _:
                 raise ValueError("Unsupported file_format. Please use 'json' or 'pickle'.")
+
+    async def async_save(self, filename: Union[str, Path], file_format: str) -> None:
+        """
+        Asynchronously saves the current state of the DictDB to a file in the specified file format.
+
+        This method offloads the save operation to a background thread so that ongoing
+        database operations are not blocked by file I/O.
+
+        :param filename: The path to the file where the state will be saved.
+        :type filename: Union[str, pathlib.Path]
+        :param file_format: The file format to use for saving ("json" or "pickle").
+        :type file_format: str
+        :return: None
+        :rtype: None
+        """
+        await asyncio.to_thread(self.save, filename, file_format)
+
+    @classmethod
+    async def async_load(cls, filename: Union[str, Path], file_format: str) -> "DictDB":
+        """
+        Asynchronously loads and returns a DictDB instance from a file containing a saved state.
+
+        This method offloads the load operation to a background thread so that ongoing
+        database operations are not blocked by file I/O.
+
+        :param filename: The path to the file from which to load the state.
+        :type filename: Union[str, pathlib.Path]
+        :param file_format: The file format used in the saved file ("json" or "pickle").
+        :type file_format: str
+        :return: A DictDB instance reconstructed from the file.
+        :rtype: DictDB
+        :raises ValueError: If the file_format is unsupported.
+        """
+        return await asyncio.to_thread(cls.load, filename, file_format)
