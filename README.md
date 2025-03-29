@@ -54,13 +54,11 @@ DictDB is structured as a standard Python package using pyproject.toml. To insta
     pip install .
 ~~~
 
-Alternatively, if/when published to PyPI, you could install it with:
+When published to PyPI **(NOT PUBLISHED YET)**, you could install it with:
 
 ~~~shell
     pip install dictdb
 ~~~
-
-(Update the above to reflect your actual repository path or PyPI name.)
 
 ### Example Quickstart
 
