@@ -121,3 +121,51 @@ async def test_async_save_load_pickle(tmp_path: Path) -> None:
     assert len(records) == 1
     assert records[0]["name"] == "Bob"
     assert records[0]["age"] == 25
+
+
+def test_multiple_save_load_cycles(tmp_path: Path) -> None:
+    """
+    Tests that the DictDB state remains consistent across multiple save/load cycles.
+
+    The database is saved and loaded repeatedly, and the final state is compared
+    with the original state to ensure that no data is lost or corrupted.
+
+    :param tmp_path: A temporary directory provided by pytest.
+    :type tmp_path: Path
+    :return: None
+    :rtype: None
+    """
+    from dictdb import DictDB
+
+    # Create and populate the database with two tables and several records.
+    db = DictDB()
+    db.create_table("users")
+    db.create_table("products")
+
+    users = db.get_table("users")
+    products = db.get_table("products")
+
+    users.insert({"id": 1, "name": "Alice", "age": 30})
+    users.insert({"id": 2, "name": "Bob", "age": 25})
+    products.insert({"id": 101, "name": "Widget", "price": 9.99})
+    products.insert({"id": 102, "name": "Gadget", "price": 19.99})
+
+    # Capture the original state for later comparison.
+    original_users = sorted(users.select(), key=lambda rec: rec["id"])
+    original_products = sorted(products.select(), key=lambda rec: rec["id"])
+
+    file_path = tmp_path / "db_consistency.json"
+    cycles = 3
+    for _ in range(cycles):
+        db.save(str(file_path), "json")
+        db = DictDB.load(str(file_path), "json")
+
+    # Validate that the state remains the same after several save/load cycles.
+    users = db.get_table("users")
+    products = db.get_table("products")
+
+    loaded_users = sorted(users.select(), key=lambda rec: rec["id"])
+    loaded_products = sorted(products.select(), key=lambda rec: rec["id"])
+
+    assert loaded_users == original_users, "Users table state is inconsistent across save/load cycles."
+    assert loaded_products == original_products, "Products table state is inconsistent across save/load cycles."
