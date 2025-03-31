@@ -1,9 +1,11 @@
 import asyncio
 import json
 import pickle
+from copy import deepcopy
 from pathlib import Path
-from typing import Dict, List, Union, cast, Any
+from typing import Dict, List, Union, cast, Any, Optional
 
+from .exceptions import DictDBError, TransactionError
 from .table import Table
 from .logging import logger
 
@@ -12,17 +14,16 @@ class DictDB:
     """
     The main in-memory database class that supports multiple tables.
 
-    Provides methods to create, drop, and retrieve tables.
+    Provides methods to create, drop, and retrieve tables, along with
+    support for persistence and transaction management.
     """
-
     def __init__(self) -> None:
         """
         Initializes an empty DictDB instance.
-
-        :return: None
-        :rtype: None
         """
         self.tables: Dict[str, Table] = {}
+        # Backup storage for transaction support.
+        self._transaction_backup: Optional[Dict[str, Table]] = None
         logger.info("Initialized an empty DictDB instance.")
 
     def create_table(self, table_name: str, primary_key: str = 'id') -> None:
@@ -226,3 +227,62 @@ class DictDB:
         :raises ValueError: If the file_format is unsupported.
         """
         return await asyncio.to_thread(cls.load, filename, file_format)
+
+    def begin_transaction(self) -> None:
+        """
+        Begins a new transaction by saving a snapshot of the current database state.
+        All subsequent modifications will be part of this transaction.
+
+        :raises TransactionError: If a transaction is already in progress.
+        :return: None
+        :rtype: None
+        """
+        if self._transaction_backup is not None:
+            raise TransactionError("A transaction is already in progress.")
+        self._transaction_backup = deepcopy(self.tables)
+        logger.debug("[TRANSACTION] Transaction started.")
+
+    def commit_transaction(self) -> None:
+        """
+        Commits the current transaction, making all changes permanent.
+        After a successful commit, the transaction backup is discarded.
+
+        :raises TransactionError: If no transaction is in progress.
+        :return: None
+        :rtype: None
+        """
+        if self._transaction_backup is None:
+            raise TransactionError("No transaction is in progress.")
+        self._transaction_backup = None
+        logger.debug("[TRANSACTION] Transaction committed.")
+
+    def rollback_transaction(self) -> None:
+        """
+        Rolls back the current transaction, reverting all changes made since the transaction began.
+        The database state is restored from the saved snapshot. Existing Table objects are updated in place,
+        and tables created during the transaction are removed.
+
+        :raises TransactionError: If no transaction is in progress.
+        :return: None
+        :rtype: None
+        """
+        if self._transaction_backup is None:
+            raise TransactionError("No transaction is in progress.")
+
+        backup = self._transaction_backup
+
+        # Update existing tables in place.
+        for table_name in list(self.tables.keys()):
+            if table_name in backup:
+                self.tables[table_name].restore(backup[table_name])
+            else:
+                # Table created during the transaction; remove it.
+                del self.tables[table_name]
+
+        # Restore tables that were dropped during the transaction.
+        for table_name, backup_table in backup.items():
+            if table_name not in self.tables:
+                self.tables[table_name] = backup_table
+
+        self._transaction_backup = None
+        logger.debug("[TRANSACTION] Transaction rolled back.")

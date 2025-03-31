@@ -20,3 +20,8 @@ class SchemaValidationError(DictDBError):
     """
     Exception raised when a record does not conform to the table schema.
     """
+
+class TransactionError(DictDBError):
+    """
+    Exception raised when there is an error in transaction management.
+    """

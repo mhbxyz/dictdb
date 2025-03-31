@@ -1,4 +1,5 @@
 import operator
+from copy import deepcopy
 from typing import Any, Optional, Dict, List, Callable, cast
 
 from .exceptions import SchemaValidationError, DuplicateKeyError, RecordNotFoundError
@@ -128,21 +129,13 @@ class Table:
     allows creation of indexes on specific fields for query acceleration.
     """
     def __init__(self, name: str, primary_key: str = 'id', schema: Optional[Schema] = None) -> None:
-        """
-        Initializes a new Table.
-
-        :param name: The name of the table.
-        :param primary_key: The field to use as the primary key.
-        :param schema: An optional schema dict mapping field names to types.
-        """
         self.table_name: str = name  # Stored as table_name to free up 'name'
         self.primary_key: str = primary_key
-        self.records: Dict[Any, Record] = {}  # Maps primary key to record (dict)
+        self.records: Dict[Any, Record] = {}
         self.schema = schema
         if self.schema is not None:
             if self.primary_key not in self.schema:
                 self.schema[self.primary_key] = int
-        # Indexes: mapping field name to an IndexBase instance.
         self.indexes: Dict[str, IndexBase] = {}
 
     def __getattr__(self, attr: str) -> Field:
@@ -175,6 +168,40 @@ class Table:
         self.primary_key = state["primary_key"]
         self.records = state["records"]
         self.schema = state["schema"]
+        self.indexes = {}
+
+    def __deepcopy__(self, memo: Dict[int, Any]) -> "Table":
+        """
+        Creates a deep copy of the Table instance.
+
+        Only core attributes (table_name, primary_key, records, schema) are deep-copied.
+        Indexes are intentionally not copied as they can be recreated if needed.
+
+        :param memo: Dictionary of already copied objects.
+        :return: A deep copy of the Table instance.
+        """
+        if id(self) in memo:
+            return memo[id(self)]  # type: ignore
+        new_table = Table(self.table_name, primary_key=self.primary_key, schema=self.schema)
+        new_table.records = deepcopy(self.records, memo)
+        memo[id(self)] = new_table
+        return new_table
+
+    def restore(self, other: "Table") -> None:
+        """
+        Restores the current table's state from another Table instance.
+
+        Only the core attributes (records and schema) are restored.
+        Indexes are reset and must be recreated if needed.
+
+        :param other: The backup Table instance.
+        :type other: Table
+        :return: None
+        :rtype: None
+        """
+        self.records = deepcopy(other.records)
+        self.schema = other.schema
+        # Reset indexes as they are not preserved.
         self.indexes = {}
 
     def create_index(self, field: str, index_type: str = "hash") -> None:
