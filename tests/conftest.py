@@ -2,6 +2,8 @@ from pathlib import Path
 from typing import List, Iterator
 
 import pytest
+from _pytest.fixtures import FixtureRequest
+
 from dictdb import DictDB, Table, logger
 
 
@@ -75,14 +77,18 @@ def test_db(tmp_path: Path) -> DictDB:
     table.insert({"id": 1, "name": "Test", "age": 100})
     return db
 
-@pytest.fixture
-def indexed_table() -> Table:
+@pytest.fixture(params=["hash", "sorted"])
+def indexed_table(request: FixtureRequest) -> Table:
     """
     Returns a Table instance prepopulated with records and an index on the 'age' field.
+    The index type is parameterized to test both "hash" and "sorted" implementations.
+
+    :param request: The pytest fixture request object.
+    :return: A prepopulated Table instance.
     """
     table = Table("people", primary_key="id", schema={"id": int, "name": str, "age": int})
     table.insert({"id": 1, "name": "Alice", "age": 30})
     table.insert({"id": 2, "name": "Bob", "age": 25})
     table.insert({"id": 3, "name": "Charlie", "age": 30})
-    table.create_index("age")
+    table.create_index("age", index_type=request.param)
     return table

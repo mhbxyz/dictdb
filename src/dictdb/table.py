@@ -1,8 +1,9 @@
 import operator
-from typing import Any, Optional, Dict, List, Callable, Set, cast
+from typing import Any, Optional, Dict, List, Callable, cast
 
 from .exceptions import SchemaValidationError, DuplicateKeyError, RecordNotFoundError
 from .condition import Condition, Query
+from .index import IndexBase, HashIndex, SortedIndex
 from .logging import logger
 from .types import Record, Schema
 
@@ -141,9 +142,8 @@ class Table:
         if self.schema is not None:
             if self.primary_key not in self.schema:
                 self.schema[self.primary_key] = int
-        # Dictionary to store indexes:
-        # Maps field name to a dict mapping field value to a set of primary keys.
-        self.indexes: Dict[str, Dict[Any, Set[Any]]] = {}
+        # Indexes: mapping field name to an IndexBase instance.
+        self.indexes: Dict[str, IndexBase] = {}
 
     def __getattr__(self, attr: str) -> Field:
         """
@@ -177,25 +177,26 @@ class Table:
         self.schema = state["schema"]
         self.indexes = {}
 
-    def create_index(self, field: str) -> None:
+    def create_index(self, field: str, index_type: str = "hash") -> None:
         """
-        Creates an index on the specified field.
-
-        The index is a mapping from field values to a set of primary keys
-        of records containing that value.
+        Creates an index on the specified field using the desired index type.
 
         :param field: The field name on which to create an index.
+        :param index_type: The type of index to create ("hash" or "sorted").
         """
         if field in self.indexes:
-            # Index already exists.
             return
-        index: Dict[Any, Set[Any]] = {}
+        if index_type == "hash":
+            self.indexes[field] = HashIndex()
+        elif index_type == "sorted":
+            self.indexes[field] = SortedIndex()
+        else:
+            raise ValueError("Unsupported index type. Use 'hash' or 'sorted'.")
+        # Populate the index with existing records.
         for pk, record in self.records.items():
             if field in record:
-                value = record[field]
-                index.setdefault(value, set()).add(pk)
-        self.indexes[field] = index
-        logger.debug(f"[INDEX] Created index on field '{field}' for table '{self.table_name}'.")
+                self.indexes[field].insert(pk, record[field])
+        logger.debug(f"[INDEX] Created {index_type} index on field '{field}' for table '{self.table_name}'.")
 
     def _update_indexes_on_insert(self, record: Record) -> None:
         """
@@ -206,8 +207,7 @@ class Table:
         pk = record[self.primary_key]
         for field, index in self.indexes.items():
             if field in record:
-                value = record[field]
-                index.setdefault(value, set()).add(pk)
+                index.insert(pk, record[field])
 
     def _update_indexes_on_update(self, pk: Any, old_record: Record, new_record: Record) -> None:
         """
@@ -222,12 +222,7 @@ class Table:
             new_value = new_record.get(field)
             if old_value == new_value:
                 continue
-            if old_value in index:
-                index[old_value].discard(pk)
-                if not index[old_value]:
-                    del index[old_value]
-            if new_value is not None:
-                index.setdefault(new_value, set()).add(pk)
+            index.update(pk, old_value, new_value)
 
     def _update_indexes_on_delete(self, record: Record) -> None:
         """
@@ -238,11 +233,7 @@ class Table:
         pk = record[self.primary_key]
         for field, index in self.indexes.items():
             if field in record:
-                value = record[field]
-                if value in index:
-                    index[value].discard(pk)
-                    if not index[value]:
-                        del index[value]
+                index.delete(pk, record[field])
 
     def _is_indexed_eq_condition(self, where: Query) -> bool:
         """
@@ -312,15 +303,15 @@ class Table:
         """
         logger.debug(f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}")
         results: List[Record] = []
+        candidate_records: List[Record]
         if where is not None and self._is_indexed_eq_condition(where):
-            condition = cast(_FieldCondition, where.condition.func)
-            field: str = condition.field
-            value: Any = condition.value
-            pks = self.indexes.get(field, {}).get(value, set())
-            candidate_records = [self.records[pk] for pk in pks]
+            func = cast(_FieldCondition, where.condition.func)
+            field: str = func.field
+            value: Any = func.value
+            candidate_pks = self.indexes[field].search(value)
+            candidate_records = [self.records[pk] for pk in candidate_pks]
         else:
             candidate_records = list(self.records.values())
-
         for record in candidate_records:
             if where is None or where(record):
                 if columns:
