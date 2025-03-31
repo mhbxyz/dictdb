@@ -181,22 +181,32 @@ class Table:
         """
         Creates an index on the specified field using the desired index type.
 
+        If index creation fails, logs the error and the system will continue to operate
+        correctly using full table scans instead of the index.
+
         :param field: The field name on which to create an index.
         :param index_type: The type of index to create ("hash" or "sorted").
         """
         if field in self.indexes:
             return
-        if index_type == "hash":
-            self.indexes[field] = HashIndex()
-        elif index_type == "sorted":
-            self.indexes[field] = SortedIndex()
-        else:
-            raise ValueError("Unsupported index type. Use 'hash' or 'sorted'.")
-        # Populate the index with existing records.
-        for pk, record in self.records.items():
-            if field in record:
-                self.indexes[field].insert(pk, record[field])
-        logger.debug(f"[INDEX] Created {index_type} index on field '{field}' for table '{self.table_name}'.")
+        try:
+            index_instance: IndexBase
+            if index_type == "hash":
+                index_instance = HashIndex()
+            elif index_type == "sorted":
+                index_instance = SortedIndex()
+            else:
+                raise ValueError("Unsupported index type. Use 'hash' or 'sorted'.")
+            # Populate the index with existing records.
+            for pk, record in self.records.items():
+                if field in record:
+                    index_instance.insert(pk, record[field])
+            self.indexes[field] = index_instance
+            logger.debug(
+                f"[INDEX] Created {index_type} index on field '{field}' for table '{self.table_name}'."
+            )
+        except Exception as e:
+            logger.error(f"[INDEX] Failed to create index on field '{field}': {e}")
 
     def _update_indexes_on_insert(self, record: Record) -> None:
         """

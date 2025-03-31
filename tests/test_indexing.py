@@ -5,6 +5,8 @@ and accelerated SELECT queries using the indexes.
 """
 from typing import Dict, Any
 
+import pytest
+
 from dictdb import Table, Query
 
 
@@ -81,3 +83,41 @@ def test_select_uses_index(indexed_table: Table) -> None:
     names = {record["name"] for record in results}
     # Expected names from original records with age 30.
     assert names == {"Alice", "Charlie"}
+
+def test_index_creation_failure_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Tests that if index creation fails, the system falls back to full table scans.
+
+    This is simulated by monkeypatching HashIndex.insert to always raise an exception.
+    After attempting to create an index on 'age', the table should not include the index,
+    and queries using the condition on 'age' must still return the correct results.
+    """
+    from dictdb import Table, Query
+    from dictdb.index import HashIndex
+
+    # Create a new table with schema and two records.
+    table = Table("test_failure", primary_key="id", schema={"id": int, "name": str, "age": int})
+    table.insert({"id": 1, "name": "Alice", "age": 30})
+    table.insert({"id": 2, "name": "Bob", "age": 25})
+
+    # Monkeypatch HashIndex.insert to always raise an exception.
+    original_insert = HashIndex.insert
+
+    def failing_insert(self: HashIndex, pk: int, value: int) -> None:
+        raise Exception("Simulated index creation failure")
+
+    monkeypatch.setattr(HashIndex, "insert", failing_insert)
+
+    # Attempt to create an index on 'age' with the "hash" type.
+    table.create_index("age", index_type="hash")
+
+    # Verify that the index was not added (fallback to full scan).
+    assert "age" not in table.indexes, "Index should not be present after creation failure."
+
+    # Restore the original method.
+    monkeypatch.setattr(HashIndex, "insert", original_insert)
+
+    # Test that select still returns the correct result using a full scan.
+    condition = Query(table.age == 30)
+    results = table.select(where=condition)
+    assert len(results) == 1 and results[0]["name"] == "Alice"
