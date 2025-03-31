@@ -1,7 +1,11 @@
+from pathlib import Path
 from typing import List, Iterator
 
 import pytest
+from _pytest.fixtures import FixtureRequest
+
 from dictdb import DictDB, Table, logger
+
 
 @pytest.fixture
 def table() -> Table:
@@ -56,3 +60,35 @@ def log_capture() -> Iterator[List[str]]:
 
     # Remove the capture sink after test completes (cleanup).
     logger.remove()
+
+@pytest.fixture
+def test_db(tmp_path: Path) -> DictDB:
+    """
+    Creates a DictDB instance with a test table and a single record for backup tests.
+
+    :param tmp_path: A temporary directory provided by pytest.
+    :type tmp_path: Path
+    :return: A DictDB instance.
+    :rtype: DictDB
+    """
+    db = DictDB()
+    db.create_table("backup_test")
+    table = db.get_table("backup_test")
+    table.insert({"id": 1, "name": "Test", "age": 100})
+    return db
+
+@pytest.fixture(params=["hash", "sorted"])
+def indexed_table(request: FixtureRequest) -> Table:
+    """
+    Returns a Table instance prepopulated with records and an index on the 'age' field.
+    The index type is parameterized to test both "hash" and "sorted" implementations.
+
+    :param request: The pytest fixture request object.
+    :return: A prepopulated Table instance.
+    """
+    table = Table("people", primary_key="id", schema={"id": int, "name": str, "age": int})
+    table.insert({"id": 1, "name": "Alice", "age": 30})
+    table.insert({"id": 2, "name": "Bob", "age": 25})
+    table.insert({"id": 3, "name": "Charlie", "age": 30})
+    table.create_index("age", index_type=request.param)
+    return table

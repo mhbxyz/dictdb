@@ -6,26 +6,7 @@ backup system for DictDB. Tests verify both periodic and manual backup triggerin
 import time
 from pathlib import Path
 
-import pytest
-
 from dictdb import DictDB, BackupManager
-
-
-@pytest.fixture
-def test_db(tmp_path: Path) -> DictDB:
-    """
-    Creates a DictDB instance with a test table and a single record for backup tests.
-
-    :param tmp_path: A temporary directory provided by pytest.
-    :type tmp_path: Path
-    :return: A DictDB instance.
-    :rtype: DictDB
-    """
-    db = DictDB()
-    db.create_table("backup_test")
-    table = db.get_table("backup_test")
-    table.insert({"id": 1, "name": "Test", "age": 100})
-    return db
 
 
 def test_manual_backup(tmp_path: Path, test_db: DictDB) -> None:
