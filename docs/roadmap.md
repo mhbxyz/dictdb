@@ -53,7 +53,7 @@
 
 ---
 
-~~### Issue 4: SQL Query Parser and Execution Engine~~
+### Issue 4: SQL Query Parser and Execution Engine
 **Description:**  
 - **Parser Development:**  
   - Design a lightweight SQL parser that converts SQL-like strings into executable operations on the dictionary.  
@@ -90,7 +90,7 @@
 
 ---
 
-### Issue 6: Indexing and Performance Optimization
+~~### Issue 6: Indexing and Performance Optimization~~
 **Description:**  
 - **Index Design:**  
   - Allow users to create indexes on specific dictionary keys to accelerate SELECT queries.  
@@ -108,7 +108,7 @@
 
 ---
 
-### Issue 7: Persistence and Serialization Mechanism
+~~### Issue 7: Persistence and Serialization Mechanism~~
 **Description:**  
 - **Save/Load Operations:**  
   - Implement methods such as `save_database(filename: str, format: str)` and `load_database(filename: str, format: str)` to persist the in-memory state.  
@@ -143,7 +143,7 @@
 
 ---
 
-### Issue 9: Packaging, Distribution, and CI/CD Integration
+~~### Issue 9: Packaging, Distribution, and CI/CD Integration~~
 **Description:**  
 - **Packaging:**  
   - Finalize package metadata in `setup.py` or `pyproject.toml` including versioning, dependencies, and entry points.  
