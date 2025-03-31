@@ -1,6 +1,45 @@
 # CHANGELOG
 
 
+## v1.2.0 (2025-03-31)
+
+### Features
+
+- **benchmarking**: Add benchmark script for query performance with and without indexes
+  ([`137cee1`](https://github.com/mhbxyz/dictdb/commit/137cee1261917cdaf95a5174d6639f57144c356b))
+
+- Introduce `scripts/benchmark.py` which benchmarks DictDB's query performance using cProfile. -
+  Implements three benchmarking scenarios: without an index, with a hash index and with a sorted
+  index. - Populates a large dataset and measures the average execution time of a simple equality
+  select query. - Module is fully documented in reStructuredText format and adheres to PEP8 with
+  strong typing.
+
+- **indexing**: Add support for user-defined indexes and automatic index updates
+  ([`d7c9baa`](https://github.com/mhbxyz/dictdb/commit/d7c9baa2a0c00c9fa5fad2e07dc565664916259a))
+
+- Implement create_index() in Table to allow creating indexes on specific fields. - Automatically
+  update indexes on INSERT, UPDATE, and DELETE operations. - Accelerate SELECT queries by using
+  indexes for simple equality conditions. - Update documentation and inline comments to reflect new
+  indexing feature and changes.
+
+This commit introduces indexing functionality to optimize SELECT queries.
+
+- **indexing**: Use efficient index data structures for maintaining indices
+  ([`d0604a3`](https://github.com/mhbxyz/dictdb/commit/d0604a3172f2a49644f7250a3aff7c8738ab3e87))
+
+- Introduced a new module "index.py" defining an abstract IndexBase with two implementations:
+  HashIndex (using Python's dict, a hash map) and SortedIndex (a simple sorted index using bisect to
+  simulate B-tree behavior). - Updated Table.create_index() to accept an "index_type" parameter
+  ("hash" or "sorted") and instantiate the corresponding index. - Refactored
+  _update_indexes_on_insert, _update_indexes_on_update, and _update_indexes_on_delete in Table to
+  delegate to the index object's methods. - Modified select() to use index.search() for simple
+  equality conditions. - Added new tests in tests/test_indexing.py to verify the behavior of
+  SortedIndex.
+
+This commit evaluates and uses efficient data structures (hash maps and a sorted index) for
+  maintaining indices and optimizes SELECT queries accordingly.
+
+
 ## v1.1.0 (2025-03-29)
 
 ### Documentation
