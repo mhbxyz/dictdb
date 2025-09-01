@@ -72,6 +72,20 @@ When published to PyPI **(NOT PUBLISHED YET)**, you could install it with:
 pip install dictdb
 ~~~
 
+## Development
+
+Use pre-commit hooks to keep style and checks consistent locally.
+
+- Install tools and hooks:
+  - `make setup`
+  - `make hooks-install`
+- What runs automatically:
+  - On commit: Ruff format + lint, MyPy (strict).
+  - On push: quick `pytest -q`.
+- Run manually:
+  - `make hooks-run` (run all hooks on the repo)
+  - `make hooks-update` (refresh hook versions)
+
 ### Example Quickstart
 
 Below is a short, end-to-end example showcasing DictDB usage:
