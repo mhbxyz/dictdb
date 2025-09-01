@@ -26,7 +26,7 @@ class BackupManager:
         db: DictDB,
         backup_dir: Union[str, Path],
         backup_interval: int = 300,
-        file_format: str = "json"
+        file_format: str = "json",
     ) -> None:
         """
         Initializes the BackupManager.

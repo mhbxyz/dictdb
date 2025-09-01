@@ -167,5 +167,9 @@ def test_multiple_save_load_cycles(tmp_path: Path) -> None:
     loaded_users = sorted(users.select(), key=lambda rec: rec["id"])
     loaded_products = sorted(products.select(), key=lambda rec: rec["id"])
 
-    assert loaded_users == original_users, "Users table state is inconsistent across save/load cycles."
-    assert loaded_products == original_products, "Products table state is inconsistent across save/load cycles."
+    assert loaded_users == original_users, (
+        "Users table state is inconsistent across save/load cycles."
+    )
+    assert loaded_products == original_products, (
+        "Products table state is inconsistent across save/load cycles."
+    )

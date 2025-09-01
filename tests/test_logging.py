@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from _pytest.capture import CaptureFixture
@@ -24,8 +23,9 @@ def test_configure_logging_no_file(capfd: CaptureFixture[str]) -> None:
     captured = capfd.readouterr().out
 
     # Verify that the expected log message is in the console output
-    assert "Initialized an empty DictDB instance" in captured, \
+    assert "Initialized an empty DictDB instance" in captured, (
         "Expected console log about initializing DictDB not found."
+    )
 
 
 def test_configure_logging_with_file(tmp_path: Path) -> None:
@@ -47,8 +47,9 @@ def test_configure_logging_with_file(tmp_path: Path) -> None:
 
     # Check file contents
     content = log_file.read_text()
-    assert "Initialized an empty DictDB instance" in content, \
+    assert "Initialized an empty DictDB instance" in content, (
         "Expected log line not found in the output file."
+    )
 
 
 def test_crud_logging_in_file(tmp_path: Path) -> None:
@@ -79,9 +80,12 @@ def test_crud_logging_in_file(tmp_path: Path) -> None:
     content = log_file.read_text()
 
     # Check for expected log lines
-    assert "[DictDB] Creating table 'users'" in content, \
+    assert "[DictDB] Creating table 'users'" in content, (
         "Did not find expected 'create_table' log line in file."
-    assert "[INSERT] Attempting to insert record into 'users'" in content, \
+    )
+    assert "[INSERT] Attempting to insert record into 'users'" in content, (
         "Did not find expected 'insert' log line in file."
-    assert "[SELECT] From table 'users'" in content, \
+    )
+    assert "[SELECT] From table 'users'" in content, (
         "Did not find expected 'select' log line in file."
+    )

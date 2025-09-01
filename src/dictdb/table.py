@@ -14,6 +14,7 @@ class _FieldCondition:
 
     It encapsulates the field name, a value to compare, and an operator function.
     """
+
     def __init__(self, field: str, value: Any, op: Callable[[Any, Any], bool]) -> None:
         """
         Initializes a _FieldCondition instance.
@@ -127,7 +128,10 @@ class Table:
     Supports dynamic attribute access to fields for building conditions and
     allows creation of indexes on specific fields for query acceleration.
     """
-    def __init__(self, name: str, primary_key: str = 'id', schema: Optional[Schema] = None) -> None:
+
+    def __init__(
+        self, name: str, primary_key: str = "id", schema: Optional[Schema] = None
+    ) -> None:
         """
         Initializes a new Table.
 
@@ -219,7 +223,9 @@ class Table:
             if field in record:
                 index.insert(pk, record[field])
 
-    def _update_indexes_on_update(self, pk: Any, old_record: Record, new_record: Record) -> None:
+    def _update_indexes_on_update(
+        self, pk: Any, old_record: Record, new_record: Record
+    ) -> None:
         """
         Updates indexes for a record that has been updated.
 
@@ -269,14 +275,18 @@ class Table:
             return
         for field, expected_type in self.schema.items():
             if field not in record:
-                raise SchemaValidationError(f"Missing field '{field}' as defined in schema.")
+                raise SchemaValidationError(
+                    f"Missing field '{field}' as defined in schema."
+                )
             if not isinstance(record[field], expected_type):
                 raise SchemaValidationError(
                     f"Field '{field}' expects type '{expected_type.__name__}', got '{type(record[field]).__name__}'."
                 )
         for field in record.keys():
             if field not in self.schema:
-                raise SchemaValidationError(f"Field '{field}' is not defined in the schema.")
+                raise SchemaValidationError(
+                    f"Field '{field}' is not defined in the schema."
+                )
 
     def insert(self, record: Record) -> None:
         """
@@ -288,20 +298,26 @@ class Table:
         :raises DuplicateKeyError: If a record with the same primary key exists.
         :raises SchemaValidationError: If the record fails schema validation.
         """
-        logger.debug(f"[INSERT] Attempting to insert record into '{self.table_name}': {record}")
+        logger.debug(
+            f"[INSERT] Attempting to insert record into '{self.table_name}': {record}"
+        )
         if self.primary_key not in record:
             new_key = max(self.records.keys()) + 1 if self.records else 1
             record[self.primary_key] = new_key
         else:
             key = record[self.primary_key]
             if key in self.records:
-                raise DuplicateKeyError(f"Record with key '{key}' already exists in table '{self.table_name}'.")
+                raise DuplicateKeyError(
+                    f"Record with key '{key}' already exists in table '{self.table_name}'."
+                )
         if self.schema is not None:
             self.validate_record(record)
         self.records[record[self.primary_key]] = record
         self._update_indexes_on_insert(record)
 
-    def select(self, columns: Optional[List[str]] = None, where: Optional[Query] = None) -> List[Record]:
+    def select(
+        self, columns: Optional[List[str]] = None, where: Optional[Query] = None
+    ) -> List[Record]:
         """
         Retrieves records matching an optional condition.
 
@@ -311,7 +327,9 @@ class Table:
         :param where: A Query used to filter records.
         :return: A list of matching records.
         """
-        logger.debug(f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}")
+        logger.debug(
+            f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}"
+        )
         results: List[Record] = []
         candidate_records: List[Record]
         if where is not None and self._is_indexed_eq_condition(where):
@@ -343,7 +361,9 @@ class Table:
         :raises Exception: If validation fails, all changes are rolled back.
         :return: The number of records updated.
         """
-        logger.debug(f"[UPDATE] Attempting update in '{self.table_name}' with changes={changes}, where={where}")
+        logger.debug(
+            f"[UPDATE] Attempting update in '{self.table_name}' with changes={changes}, where={where}"
+        )
         updated_keys: List[Any] = []
         backup: Dict[Any, Record] = {}
         updated_count = 0
@@ -357,7 +377,9 @@ class Table:
                         self.validate_record(record)
                     updated_count += 1
             if updated_count == 0:
-                raise RecordNotFoundError(f"No records match the update criteria in table '{self.table_name}'.")
+                raise RecordNotFoundError(
+                    f"No records match the update criteria in table '{self.table_name}'."
+                )
         except Exception as e:
             for key in updated_keys:
                 self.records[key] = backup[key]
@@ -375,10 +397,18 @@ class Table:
         :raises RecordNotFoundError: If no records match the criteria.
         :return: The number of records deleted.
         """
-        logger.debug(f"[DELETE] Attempting delete in '{self.table_name}' with where={where}")
-        keys_to_delete = [key for key, record in self.records.items() if where is None or where(record)]
+        logger.debug(
+            f"[DELETE] Attempting delete in '{self.table_name}' with where={where}"
+        )
+        keys_to_delete = [
+            key
+            for key, record in self.records.items()
+            if where is None or where(record)
+        ]
         if not keys_to_delete:
-            raise RecordNotFoundError(f"No records match the deletion criteria in table '{self.table_name}'.")
+            raise RecordNotFoundError(
+                f"No records match the deletion criteria in table '{self.table_name}'."
+            )
         for key in keys_to_delete:
             record = self.records[key]
             self._update_indexes_on_delete(record)

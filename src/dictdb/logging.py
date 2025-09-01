@@ -6,7 +6,9 @@ from loguru import logger
 __all__ = ["logger", "configure_logging"]
 
 
-def configure_logging(level: str = "INFO", console: bool = True, logfile: Optional[str] = None) -> None:
+def configure_logging(
+    level: str = "INFO", console: bool = True, logfile: Optional[str] = None
+) -> None:
     """
     Configures Loguru logging for the DictDB.
 
@@ -28,7 +30,7 @@ def configure_logging(level: str = "INFO", console: bool = True, logfile: Option
             sink=sys.stdout,
             level=level,
             format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> "
-                   "| <level>{level}</level> | <level>{message}</level>"
+            "| <level>{level}</level> | <level>{message}</level>",
         )
 
     # Optionally add a file sink.
@@ -36,7 +38,12 @@ def configure_logging(level: str = "INFO", console: bool = True, logfile: Option
         logger.add(
             sink=logfile,
             level=level,
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
         )
 
-    logger.debug("Loguru logger configured with level='%s', console=%s, logfile=%s", level, console, logfile)
+    logger.debug(
+        "Loguru logger configured with level='%s', console=%s, logfile=%s",
+        level,
+        console,
+        logfile,
+    )

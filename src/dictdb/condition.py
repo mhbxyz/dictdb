@@ -73,7 +73,9 @@ class Condition:
 
         :raises TypeError: Always raised to disallow boolean context usage.
         """
-        raise TypeError("Condition objects should not be evaluated as booleans; wrap them in Query instead.")
+        raise TypeError(
+            "Condition objects should not be evaluated as booleans; wrap them in Query instead."
+        )
 
 
 class Query:

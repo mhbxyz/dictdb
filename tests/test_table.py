@@ -2,7 +2,13 @@ from typing import Any, Dict
 
 import pytest
 
-from dictdb import Table, Query, DuplicateKeyError, RecordNotFoundError, SchemaValidationError
+from dictdb import (
+    Table,
+    Query,
+    DuplicateKeyError,
+    RecordNotFoundError,
+    SchemaValidationError,
+)
 
 
 def test_insert_valid_record(table: Table) -> None:

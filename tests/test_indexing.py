@@ -3,6 +3,7 @@ This module contains unit tests for the indexing features added to the Table.
 Tests cover index creation, automatic index updates on INSERT, UPDATE, and DELETE,
 and accelerated SELECT queries using the indexes.
 """
+
 from typing import Dict, Any
 
 import pytest
@@ -29,6 +30,7 @@ def test_index_creation(indexed_table: Table) -> None:
         assert len(result_30) == 2
         assert len(result_25) == 1
 
+
 def test_insert_updates_index(indexed_table: Table) -> None:
     """
     Tests that inserting a new record updates the index automatically.
@@ -41,12 +43,15 @@ def test_insert_updates_index(indexed_table: Table) -> None:
         result = index.search(25)
         assert len(result) == 2
 
+
 def test_update_updates_index(indexed_table: Table) -> None:
     """
     Tests that updating an indexed field updates the index mapping.
     """
     # Update Bob's age from 25 to 30.
-    updated = indexed_table.update({"age": 30}, where=Query(indexed_table.name == "Bob"))
+    updated = indexed_table.update(
+        {"age": 30}, where=Query(indexed_table.name == "Bob")
+    )
     assert updated == 1
     index = indexed_table.indexes["age"]
     if hasattr(index, "index"):
@@ -58,6 +63,7 @@ def test_update_updates_index(indexed_table: Table) -> None:
         result_30 = index.search(30)
         assert len(result_25) == 0
         assert len(result_30) == 3
+
 
 def test_delete_updates_index(indexed_table: Table) -> None:
     """
@@ -74,6 +80,7 @@ def test_delete_updates_index(indexed_table: Table) -> None:
         result = index.search(30)
         assert len(result) == 1
 
+
 def test_select_uses_index(indexed_table: Table) -> None:
     """
     Tests that a simple equality select on an indexed field returns the correct results.
@@ -83,6 +90,7 @@ def test_select_uses_index(indexed_table: Table) -> None:
     names = {record["name"] for record in results}
     # Expected names from original records with age 30.
     assert names == {"Alice", "Charlie"}
+
 
 def test_index_creation_failure_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     """
@@ -96,7 +104,9 @@ def test_index_creation_failure_fallback(monkeypatch: pytest.MonkeyPatch) -> Non
     from dictdb.index import HashIndex
 
     # Create a new table with schema and two records.
-    table = Table("test_failure", primary_key="id", schema={"id": int, "name": str, "age": int})
+    table = Table(
+        "test_failure", primary_key="id", schema={"id": int, "name": str, "age": int}
+    )
     table.insert({"id": 1, "name": "Alice", "age": 30})
     table.insert({"id": 2, "name": "Bob", "age": 25})
 
@@ -112,7 +122,9 @@ def test_index_creation_failure_fallback(monkeypatch: pytest.MonkeyPatch) -> Non
     table.create_index("age", index_type="hash")
 
     # Verify that the index was not added (fallback to full scan).
-    assert "age" not in table.indexes, "Index should not be present after creation failure."
+    assert "age" not in table.indexes, (
+        "Index should not be present after creation failure."
+    )
 
     # Restore the original method.
     monkeypatch.setattr(HashIndex, "insert", original_insert)
