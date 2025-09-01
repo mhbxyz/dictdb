@@ -33,17 +33,17 @@ print(it_staff)
 
 ## Docs
 
-- Overview: `docs/overview.md`
-- Installation: `docs/installation.md`
-- Quickstart & Basic Usage: `docs/quickstart.md`
-- Conditions & Queries: `docs/queries.md`
-- Schema Validation: `docs/schema.md`
-- Logging: `docs/logging.md`
-- Indexing: `docs/indexing.md`
-- API Reference: `docs/api.md`
-- Publishing: `docs/publishing.md`
-- Development Guide: `docs/development.md`
-- Roadmap: `docs/roadmap.md`
+- Overview: https://github.com/mhbxyz/dictdb/blob/main/docs/overview.md
+- Installation: https://github.com/mhbxyz/dictdb/blob/main/docs/installation.md
+- Quickstart & Basic Usage: https://github.com/mhbxyz/dictdb/blob/main/docs/quickstart.md
+- Conditions & Queries: https://github.com/mhbxyz/dictdb/blob/main/docs/queries.md
+- Schema Validation: https://github.com/mhbxyz/dictdb/blob/main/docs/schema.md
+- Logging: https://github.com/mhbxyz/dictdb/blob/main/docs/logging.md
+- Indexing: https://github.com/mhbxyz/dictdb/blob/main/docs/indexing.md
+- API Reference: https://github.com/mhbxyz/dictdb/blob/main/docs/api.md
+- Publishing: https://github.com/mhbxyz/dictdb/blob/main/docs/publishing.md
+- Development Guide: https://github.com/mhbxyz/dictdb/blob/main/docs/development.md
+- Roadmap: https://github.com/mhbxyz/dictdb/blob/main/docs/roadmap.md
 
 ## Development
 
@@ -52,4 +52,3 @@ print(it_staff)
 - Coverage: `make coverage`
 
 Contributions and bug reports are welcome.
-
