@@ -1,7 +1,7 @@
 # Variables
 UV ?= uv
 
-.PHONY: help setup install-uv sync lint format fix typecheck test coverage build clean benchmark release-dry-run release-version-dry-run release check
+.PHONY: help setup install-uv sync lint format fix typecheck test coverage build clean benchmark release-dry-run release-version-dry-run release check hooks-install hooks-run hooks-update
 
 .DEFAULT_GOAL := help
 
@@ -59,3 +59,12 @@ release: ## Run semantic-release (version, changelog, publish)
 
 check: format lint typecheck test ## Run formatter, linter, type checks, and tests
 
+hooks-install: ## Install pre-commit and set up git hooks
+	$(UV) pip install pre-commit
+	$(UV) run pre-commit install --hook-type pre-commit --hook-type pre-push
+
+hooks-run: ## Run all pre-commit hooks on the repository
+	$(UV) run pre-commit run --all-files --show-diff-on-failure
+
+hooks-update: ## Update hook versions defined in .pre-commit-config.yaml
+	$(UV) run pre-commit autoupdate
