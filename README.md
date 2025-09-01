@@ -2,6 +2,10 @@
   <img src="https://raw.githubusercontent.com/mhbxyz/dictdb/main/docs/DictDBLogo.png" alt="DictDB Logo" width="800"/>
 </p>
 
+![CI](https://github.com/mhbxyz/dictdb/actions/workflows/ci.yml/badge.svg)
+[![Release](https://github.com/mhbxyz/dictdb/actions/workflows/release.yml/badge.svg)](https://github.com/mhbxyz/dictdb/actions/workflows/release.yml)
+[![PyPI version](https://img.shields.io/pypi/v/dictdb.svg)](https://pypi.org/project/dictdb/)
+
 DictDB is an in‑memory, dictionary-based database system for Python. It provides SQL‑like CRUD operations, schema validation, logging, indexing, and a fluent interface for building complex query conditions. DictDB can be used for rapid prototyping, testing, or any scenario where a relational‑style workflow is needed in‑memory without the overhead of a full database engine.
 
 ---

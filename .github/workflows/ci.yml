@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
@@ -46,37 +50,3 @@ jobs:
         run: |
           uv run coverage run -m pytest --maxfail=1 --disable-warnings
           uv run coverage report -m
-
-  release:
-    needs: [ lint-and-test ]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-
-      - name: Install uv
-        run: |
-          pip install uv
-
-      - name: Sync with uv.lock
-        run: |
-          uv sync
-
-      - name: Semantic Release
-        run: |
-          uv run semantic-release version
-          uv run semantic-release changelog
-          uv run semantic-release publish
-        env:
-          # Required for generating GitHub release
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Required only if you set 'upload_to_pypi=true'
-          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
