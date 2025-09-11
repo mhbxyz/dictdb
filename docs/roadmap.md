@@ -49,6 +49,12 @@ This roadmap captures strengths, improvement opportunities, and concrete next st
 - Stream JSON directly to file; micro‑opt index maintenance already optimized on update.
 - Acceptance: simpler I/O path; no behavior change.
 
+10) Command‑Line Interface
+- Provide a `dictdb` CLI to run the database as a program.
+- Commands: `dictdb init`, `dictdb load <path>`, `dictdb query "<expr>"`, `dictdb export --format json|csv`.
+- Packaging: expose entry point via `pyproject.toml` under `[project.scripts]`.
+- Acceptance: smoke tests cover each command; docs include quick examples (e.g., `dictdb query 'from users where age > 30'`).
+
 ## Nice‑To‑Haves
 - Generated API docs (pdoc/Sphinx) under `docs/` to sync with code.
 - Example notebooks for queries, indexing, backups.
