@@ -74,4 +74,15 @@ print("Loaded tables:", db2.list_tables())
 - Validate: `make check` (format, lint, types, tests)
 - Coverage: `make coverage`
 
+### Benchmarks
+
+Run the SELECT benchmark with and without indexes:
+
+- Quick run: `make benchmark`
+- Tunable: `make bench ROWS=20000 ITERATIONS=20 AGE=30 SEED=123`
+- JSON output: `make bench OUT=results.json`
+- Profile: `make bench PROFILE=1`
+
+See docs/benchmark.md for more details and CLI options.
+
 Contributions and bug reports are welcome.
