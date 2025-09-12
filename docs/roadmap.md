@@ -27,6 +27,13 @@ This roadmap focuses on concrete improvements and extensions derived from the cu
 - Support `pk_generator: Callable[[], Any]`; guard auto‑int to integers; document monotonic guarantees.
 - Acceptance: custom PK works across insert/update/delete; collision tests included.
 
+7) On‑Disk Mode & Per‑Query Durability
+- Open databases directly from a file (e.g., `DictDB.open(path, mode="ondisk")`) where each INSERT/UPDATE/DELETE is durably persisted.
+- Add a lightweight WAL/journal (JSONL/NDJSON) recording operations; crash‑safe recovery on startup; periodic checkpoint/compaction to a full snapshot.
+- Configurable sync policy: `sync="always"|"batch"|"os"` (fsync per op vs timed/batched flush); expose `commit()` for manual barriers.
+- Backpressure and error handling: surface I/O errors to callers; ensure in‑memory and on‑disk states stay consistent or roll back.
+- Acceptance: after each successful mutating call in durable mode, state survives process crash; recovery replays journal; compaction keeps file size bounded; benchmarks quantify overhead.
+
 
 8) Backup Manager Enhancements
 - Retention policy (max files/age), compression option, backoff on repeated failures.
