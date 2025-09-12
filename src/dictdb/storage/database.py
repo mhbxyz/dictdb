@@ -1,11 +1,10 @@
 import asyncio
 import json
-import pickle
 from pathlib import Path
-from typing import Dict, List, Union, Any
+from typing import Dict, List, Union
 
-from .table import Table
-from .logging import logger
+from ..core.table import Table
+from ..obs.logging import logger
 
 
 class DictDB:
@@ -122,42 +121,9 @@ class DictDB:
         ).info(
             "Saving database to {path} (format={format}, tables={tables}, records={records})."
         )
-        match file_format:
-            case "json":
-                state: Dict[str, Any] = {"tables": {}}
-                for table_name, table in self.tables.items():
-                    schema = None
-                    if table.schema is not None:
-                        schema = {
-                            field: table.schema[field].__name__
-                            for field in table.schema
-                        }
-                    state["tables"][table_name] = {
-                        "primary_key": table.primary_key,
-                        "schema": schema,
-                        "records": table.all(),
-                    }
-                # Use StringIO to produce a JSON string.
-                from io import StringIO
+        from .persist import save as persist_save
 
-                s = StringIO()
-                json.dump(state, s, indent=4)
-                json_content: str = s.getvalue()
-                with open(filename, "w", encoding="utf-8") as f:
-                    f.write(json_content)
-            case "pickle":
-                # Use BytesIO to produce pickle bytes.
-                from io import BytesIO
-
-                b = BytesIO()
-                pickle.dump(self, b)
-                pickled_content: bytes = b.getvalue()
-                with open(filename, "wb") as f:
-                    f.write(pickled_content)
-            case _:
-                raise ValueError(
-                    "Unsupported file_format. Please use 'json' or 'pickle'."
-                )
+        persist_save(self, filename, file_format)
         logger.bind(component="DictDB", op="SAVE", path=filename).info(
             "Save completed: {path}"
         )
@@ -221,42 +187,22 @@ class DictDB:
             filename = str(filename)
 
         file_format = file_format.lower()
-        match file_format:
-            case "json":
-                db = cls._load_from_json(filename)
-                tables = len(db.tables)
-                records = sum(t.size() for t in db.tables.values())
-                logger.bind(
-                    component="DictDB",
-                    op="LOAD",
-                    path=filename,
-                    format=file_format,
-                    tables=tables,
-                    records=records,
-                ).info(
-                    "Loaded database from {path} (format={format}, tables={tables}, records={records})."
-                )
-                return db
-            case "pickle":
-                with open(filename, "rb") as f:
-                    loaded_db: DictDB = pickle.load(f)
-                tables = len(loaded_db.tables)
-                records = sum(t.size() for t in loaded_db.tables.values())
-                logger.bind(
-                    component="DictDB",
-                    op="LOAD",
-                    path=filename,
-                    format=file_format,
-                    tables=tables,
-                    records=records,
-                ).info(
-                    "Loaded database from {path} (format={format}, tables={tables}, records={records})."
-                )
-                return loaded_db
-            case _:
-                raise ValueError(
-                    "Unsupported file_format. Please use 'json' or 'pickle'."
-                )
+        from .persist import load as persist_load
+
+        db = persist_load(filename, file_format)
+        tables = len(db.tables)
+        records = sum(t.size() for t in db.tables.values())
+        logger.bind(
+            component="DictDB",
+            op="LOAD",
+            path=filename,
+            format=file_format,
+            tables=tables,
+            records=records,
+        ).info(
+            "Loaded database from {path} (format={format}, tables={tables}, records={records})."
+        )
+        return db
 
     async def async_save(self, filename: Union[str, Path], file_format: str) -> None:
         """
