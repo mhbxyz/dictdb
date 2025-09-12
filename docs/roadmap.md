@@ -32,10 +32,6 @@ This roadmap focuses on concrete improvements and extensions derived from the cu
 - Support `pk_generator: Callable[[], Any]`; guard auto‑int to integers; document monotonic guarantees.
 - Acceptance: custom PK works across insert/update/delete; collision tests included.
 
-7) Logging & Observability
-- Fix `configure_logging()` to use Loguru `{}` formatting; add structured context (table, op, counts), optional JSON logs.
-- Sampling for verbose paths; consistent levels across modules.
-- Acceptance: zero `%s` artifacts; fields present in debug logs.
 
 8) Backup Manager Enhancements
 - Retention policy (max files/age), compression option, backoff on repeated failures.
