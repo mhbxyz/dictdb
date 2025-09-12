@@ -32,4 +32,6 @@ upload_to_pypi = true
 branch = "main"
 repository_platform = "github"
 version_source = "commit"
+# Ensure the runtime version is sourced from the installed distribution via importlib.metadata
+# (see src/dictdb/__init__.py). Semantic-release will continue to bump the value in pyproject.toml.
 changelog_file = "CHANGELOG.md"
