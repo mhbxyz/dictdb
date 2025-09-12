@@ -18,11 +18,6 @@ This roadmap focuses on concrete improvements and extensions derived from the cu
 - Add composite and unique indexes; `rebuild_index(field)` and stats for selectivity hints.
 - Acceptance: range filters avoid full scans; uniqueness enforced; benchmarks show speedups.
 
-4) Query DSL & Results
-- Add `IN`, `contains`, `startswith/endswith`, `order_by`, `limit/offset`, projections with aliases.
-- Provide a tiny expression parser reused by the CLI (string → `Query`).
-- Acceptance: new operators covered by tests; deterministic ordering and pagination.
-
 5) Schema & Validation
 - Copy `schema` on `Table.__init__` before mutating; support `defaults`, `nullable`, coercion hooks, and field validators.
 - Add unique constraints independent of PK.
