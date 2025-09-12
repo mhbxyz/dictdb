@@ -1,6 +1,41 @@
 # CHANGELOG
 
 
+## v1.4.0 (2025-09-12)
+
+### Bug Fixes
+
+- **logging, database**: Satisfy mypy strict and ruff; make check green
+  ([`47266bd`](https://github.com/mhbxyz/dictdb/commit/47266bddd1a85ccfd4e3d1ad50a3f890d5f09380))
+
+- logging: add LogFilter Protocol and type-safe sampling filter - logging: avoid passing
+  format=None; always use explicit format strings - logging: conditionally apply filter to match
+  Loguru’s expected types - logging: remove unused imports - database: remove redundant cast and
+  unused ignore; use typed loaded_db - tooling: run make check (ruff, mypy --strict, pytest) — all
+  pass
+
+### Documentation
+
+- Expand README quickstart; update API and logging docs
+  ([`728691e`](https://github.com/mhbxyz/dictdb/commit/728691e7aac6bc46075da361b077787438ff4341))
+
+- README: add full end-to-end quickstart (insert, index, query, update/delete, introspection,
+  save/load) - Quickstart/Queries: replace Query with Condition in examples - API: document Table
+  introspection (columns, count/size, len, indexed_fields, has_index, schema_fields,
+  primary_key_name) and update signatures to use Condition - Logging: add JSON logging, debug
+  sampling, and structured context examples - Overview: mention structured logging and introspection
+  helpers - Roadmap: remove completed item 7
+
+### Features
+
+- **logging**: Add structured logging, JSON option, and info-level events
+  ([`6539728`](https://github.com/mhbxyz/dictdb/commit/6539728438ab33e6a29fcb86d38470504baf0e3c))
+
+- configure_logging: support JSON logs (serialize), debug sampling, and include {extra} context -
+  table: bind structured context; add INFO logs for insert/update/delete and index creation -
+  database: add INFO logs for init, create/drop table, save/load with table/record counts
+
+
 ## v1.3.0 (2025-09-12)
 
 ### Build System
