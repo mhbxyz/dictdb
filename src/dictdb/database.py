@@ -2,7 +2,7 @@ import asyncio
 import json
 import pickle
 from pathlib import Path
-from typing import Dict, List, Union, cast, Any
+from typing import Dict, List, Union, Any
 
 from .table import Table
 from .logging import logger
@@ -43,9 +43,9 @@ class DictDB:
         if table_name in self.tables:
             raise ValueError(f"Table '{table_name}' already exists.")
         self.tables[table_name] = Table(table_name, primary_key)
-        logger.bind(component="DictDB", op="CREATE_TABLE", table=table_name, pk=primary_key).info(
-            "Created table '{table}' (pk='{pk}')."
-        )
+        logger.bind(
+            component="DictDB", op="CREATE_TABLE", table=table_name, pk=primary_key
+        ).info("Created table '{table}' (pk='{pk}').")
 
     def drop_table(self, table_name: str) -> None:
         """
@@ -112,7 +112,14 @@ class DictDB:
         # Compute simple stats for observability
         table_count = len(self.tables)
         record_count = sum(t.size() for t in self.tables.values())
-        logger.bind(component="DictDB", op="SAVE", tables=table_count, records=record_count, format=file_format, path=filename).info(
+        logger.bind(
+            component="DictDB",
+            op="SAVE",
+            tables=table_count,
+            records=record_count,
+            format=file_format,
+            path=filename,
+        ).info(
             "Saving database to {path} (format={format}, tables={tables}, records={records})."
         )
         match file_format:
@@ -151,7 +158,9 @@ class DictDB:
                 raise ValueError(
                     "Unsupported file_format. Please use 'json' or 'pickle'."
                 )
-        logger.bind(component="DictDB", op="SAVE", path=filename).info("Save completed: {path}")
+        logger.bind(component="DictDB", op="SAVE", path=filename).info(
+            "Save completed: {path}"
+        )
 
     @classmethod
     def _load_from_json(cls, filename: str) -> "DictDB":
@@ -217,20 +226,33 @@ class DictDB:
                 db = cls._load_from_json(filename)
                 tables = len(db.tables)
                 records = sum(t.size() for t in db.tables.values())
-                logger.bind(component="DictDB", op="LOAD", path=filename, format=file_format, tables=tables, records=records).info(
+                logger.bind(
+                    component="DictDB",
+                    op="LOAD",
+                    path=filename,
+                    format=file_format,
+                    tables=tables,
+                    records=records,
+                ).info(
                     "Loaded database from {path} (format={format}, tables={tables}, records={records})."
                 )
                 return db
             case "pickle":
                 with open(filename, "rb") as f:
-                    db = pickle.load(f)
-                db = cast(DictDB, db)
-                tables = len(db.tables)
-                records = sum(t.size() for t in db.tables.values())
-                logger.bind(component="DictDB", op="LOAD", path=filename, format=file_format, tables=tables, records=records).info(
+                    loaded_db: DictDB = pickle.load(f)
+                tables = len(loaded_db.tables)
+                records = sum(t.size() for t in loaded_db.tables.values())
+                logger.bind(
+                    component="DictDB",
+                    op="LOAD",
+                    path=filename,
+                    format=file_format,
+                    tables=tables,
+                    records=records,
+                ).info(
                     "Loaded database from {path} (format={format}, tables={tables}, records={records})."
                 )
-                return db
+                return loaded_db
             case _:
                 raise ValueError(
                     "Unsupported file_format. Please use 'json' or 'pickle'."

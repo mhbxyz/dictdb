@@ -206,13 +206,17 @@ class Table:
                 if field in record:
                     index_instance.insert(pk, record[field])
             self.indexes[field] = index_instance
-            bind = logger.bind(table=self.table_name, op="INDEX", field=field, index_type=index_type)
-            bind.debug("[INDEX] Created {index_type} index on field '{table}'.")
-            bind.info("Index created on field '{field}' (type={index_type}) for table '{table}'.")
-        except Exception as e:
-            logger.bind(table=self.table_name, op="INDEX", field=field, index_type=index_type).error(
-                f"[INDEX] Failed to create index on field '{field}': {e}"
+            bind = logger.bind(
+                table=self.table_name, op="INDEX", field=field, index_type=index_type
             )
+            bind.debug("[INDEX] Created {index_type} index on field '{table}'.")
+            bind.info(
+                "Index created on field '{field}' (type={index_type}) for table '{table}'."
+            )
+        except Exception as e:
+            logger.bind(
+                table=self.table_name, op="INDEX", field=field, index_type=index_type
+            ).error(f"[INDEX] Failed to create index on field '{field}': {e}")
 
     def _update_indexes_on_insert(self, record: Record) -> None:
         """
@@ -316,9 +320,9 @@ class Table:
             self.validate_record(record)
         self.records[record[self.primary_key]] = record
         self._update_indexes_on_insert(record)
-        logger.bind(table=self.table_name, op="INSERT", pk=record[self.primary_key]).info(
-            "Record inserted into '{table}' (pk={pk})."
-        )
+        logger.bind(
+            table=self.table_name, op="INSERT", pk=record[self.primary_key]
+        ).info("Record inserted into '{table}' (pk={pk}).")
 
     def select(
         self, columns: Optional[List[str]] = None, where: Optional[Condition] = None

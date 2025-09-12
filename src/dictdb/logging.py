@@ -1,9 +1,13 @@
 import sys
-from typing import Optional, Callable
+from typing import Optional, Protocol, Any
 
 from loguru import logger
 
 __all__ = ["logger", "configure_logging"]
+
+
+class LogFilter(Protocol):
+    def __call__(self, record: Any) -> bool: ...
 
 
 def configure_logging(
@@ -34,11 +38,11 @@ def configure_logging(
     logger.remove()
 
     # Optional sampling filter for DEBUG-level verbosity.
-    log_filter: Optional[Callable[[dict], bool]] = None
+    log_filter: Optional[LogFilter] = None
     if sample_debug_every is not None and sample_debug_every > 1:
-        counter = {"n": 0}
+        counter: dict[str, int] = {"n": 0}
 
-        def _filter(record: dict) -> bool:
+        def _filter(record: dict[str, Any]) -> bool:
             if record["level"].name != "DEBUG":
                 return True
             counter["n"] += 1
@@ -54,23 +58,40 @@ def configure_logging(
 
     # Add a console sink if desired.
     if console:
-        logger.add(
-            sink=sys.stdout,
-            level=level,
-            format=None if json else base_format,
-            serialize=json,
-            filter=log_filter,
-        )
+        if log_filter is not None:
+            logger.add(
+                sink=sys.stdout,
+                level=level,
+                format=base_format,
+                serialize=json,
+                filter=log_filter,
+            )
+        else:
+            logger.add(
+                sink=sys.stdout,
+                level=level,
+                format=base_format,
+                serialize=json,
+            )
 
     # Optionally add a file sink.
     if logfile:
-        logger.add(
-            sink=logfile,
-            level=level,
-            format=None if json else "{time:YYYY-MM-DD HH:mm:ss} | {level} | {extra} | {message}",
-            serialize=json,
-            filter=log_filter,
-        )
+        file_format = "{time:YYYY-MM-DD HH:mm:ss} | {level} | {extra} | {message}"
+        if log_filter is not None:
+            logger.add(
+                sink=logfile,
+                level=level,
+                format=file_format,
+                serialize=json,
+                filter=log_filter,
+            )
+        else:
+            logger.add(
+                sink=logfile,
+                level=level,
+                format=file_format,
+                serialize=json,
+            )
 
     logger.bind(component="configure_logging").debug(
         "Logger configured (level={level}, console={console}, logfile={logfile}, json={json}, sample_debug_every={sample})",
