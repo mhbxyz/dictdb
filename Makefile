@@ -1,7 +1,7 @@
 # Variables
 UV ?= uv
 
-.PHONY: help setup install-uv sync lint format fix typecheck test coverage build clean benchmark release-dry-run release-version-dry-run release check hooks-install hooks-run hooks-update
+.PHONY: help setup install-uv sync lint format fix typecheck test coverage build clean benchmark bench release-dry-run release-version-dry-run release check hooks-install hooks-run hooks-update
 
 .DEFAULT_GOAL := help
 
@@ -45,6 +45,23 @@ clean: ## Remove caches and build artifacts
 
 benchmark: ## Run the benchmark script
 	$(UV) run python scripts/benchmark.py
+
+# Benchmark with parameters (override with e.g. ROWS=20000 ITERATIONS=20 AGE=30 SEED=123 OUT=results.json PROFILE=1)
+ROWS ?= 10000
+ITERATIONS ?= 10
+AGE ?= 30
+SEED ?= 42
+OUT ?=
+PROFILE ?=
+
+bench: ## Run the benchmark with tunables and optional JSON output
+	$(UV) run python scripts/benchmark.py \
+		--rows $(ROWS) \
+		--iterations $(ITERATIONS) \
+		--age $(AGE) \
+		--seed $(SEED) \
+		$(if $(PROFILE),--profile,) \
+		$(if $(OUT),--json-out $(OUT),)
 
 release-dry-run: ## Semantic-release dry run (no publish)
 	$(UV) run semantic-release publish --noop --skip-build

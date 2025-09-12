@@ -54,3 +54,4 @@ all_users = users.select()
 rows_updated = users.update({"age": 26}, where=Condition(users.name == "Bob"))
 deleted = users.delete(where=Condition(users.name == "Alice"))
 ```
+

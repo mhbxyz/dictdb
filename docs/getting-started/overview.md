@@ -14,3 +14,4 @@ DictDB is an in‑memory, dictionary-based database system for Python. It provid
 - Persistence and Backup: save/load JSON or pickle; optional backup manager.
 - Indexing: hash or sorted indices to speed up equality lookups.
 - Testing: fully unit‑tested with pytest.
+

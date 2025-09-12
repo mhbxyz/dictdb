@@ -5,6 +5,10 @@
 ![CI](https://github.com/mhbxyz/dictdb/actions/workflows/ci.yml/badge.svg)
 [![Release](https://github.com/mhbxyz/dictdb/actions/workflows/release.yml/badge.svg)](https://github.com/mhbxyz/dictdb/actions/workflows/release.yml)
 [![PyPI version](https://img.shields.io/pypi/v/dictdb.svg)](https://pypi.org/project/dictdb/)
+[![Python versions](https://img.shields.io/pypi/pyversions/dictdb.svg)](https://pypi.org/project/dictdb/)
+[![License](https://img.shields.io/github/license/mhbxyz/dictdb.svg)](LICENSE)
+[![Code style: Ruff](https://img.shields.io/badge/code%20style-Ruff-46a2f1.svg)](https://docs.astral.sh/ruff/)
+[![Type checking: MyPy](https://img.shields.io/badge/type%20checking-mypy-2A6DB2.svg)](https://mypy-lang.org/)
 
 DictDB is an in‑memory, dictionary-based database for Python with SQL‑like CRUD, optional schemas, fast equality lookups via indexes, and a fluent query DSL. Great for prototyping, tests, and lightweight relational workflows without a full DB engine.
 
@@ -18,7 +22,7 @@ DictDB is an in‑memory, dictionary-based database for Python with SQL‑like C
 ```python
 from dictdb import DictDB, Condition, configure_logging
 
-# Configure human-friendly console logs (see docs/logging.md for JSON logs)
+# Configure human-friendly console logs (see docs/guides/logging.md for JSON logs)
 configure_logging(level="INFO", console=True)
 
 # 1) Create DB and a table
@@ -56,16 +60,10 @@ print("Loaded tables:", db2.list_tables())
 
 ## Docs
 
-- [Overview](docs/overview.md)
-- [Installation](docs/installation.md)
-- [Quickstart & Basic Usage](docs/quickstart.md)
-- [Conditions & Queries](docs/queries.md)
-- [Schema Validation](docs/schema.md)
-- [Logging](docs/logging.md)
-- [Indexing](docs/indexing.md)
-- [API Reference](docs/api.md)
-- [Publishing](docs/publishing.md)
-- [Development Guide](docs/development.md)
+- [Getting Started](docs/getting-started/README.md)
+- [Guides](docs/guides/README.md)
+- [Reference](docs/reference/README.md)
+- [Contributing](docs/contributing/README.md)
 - [Roadmap](docs/roadmap.md)
 
 ## Development
@@ -73,5 +71,16 @@ print("Loaded tables:", db2.list_tables())
 - Setup: `make setup` then `make hooks-install`
 - Validate: `make check` (format, lint, types, tests)
 - Coverage: `make coverage`
+
+### Benchmarks
+
+Run the SELECT benchmark with and without indexes:
+
+- Quick run: `make benchmark`
+- Tunable: `make bench ROWS=20000 ITERATIONS=20 AGE=30 SEED=123`
+- JSON output: `make bench OUT=results.json`
+- Profile: `make bench PROFILE=1`
+
+See docs/guides/benchmark.md for more details and CLI options.
 
 Contributions and bug reports are welcome.

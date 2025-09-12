@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Benchmarking Script for DictDB Query Performance
@@ -13,18 +13,20 @@ using DictDB. It measures the average execution time (over a number of iteration
 The script uses cProfile to profile the overall performance of the benchmark run.
 
 Usage:
-    $ python scripts/benchmark.py
+    $ python scripts/benchmark.py [--rows 10000] [--iterations 10] [--age 30] [--seed 42] [--profile] [--json-out results.json]
 
 Author: Your Name
 Date: YYYY-MM-DD
 """
 
+import argparse
 import cProfile
+import json
 import random
 from time import perf_counter
-from typing import TypedDict
+from typing import Optional, TypedDict
 
-from dictdb import Table, Query
+from dictdb import Condition, Table, configure_logging
 
 
 class BenchmarkResult(TypedDict):
@@ -42,7 +44,7 @@ class BenchmarkResult(TypedDict):
     sorted_index: float
 
 
-def populate_table(n: int, index_type: str = None) -> Table:
+def populate_table(n: int, index_type: Optional[str] = None) -> Table:
     """
     Populates a new DictDB Table with n records.
 
@@ -75,12 +77,18 @@ def benchmark_query(table: Table, query_age: int, iterations: int) -> float:
     """
     start = perf_counter()
     for _ in range(iterations):
-        _ = table.select(where=Query(table.age == query_age))
+        _ = table.select(where=Condition(table.age == query_age))
     end = perf_counter()
     return (end - start) / iterations
 
 
-def run_benchmarks(n: int = 10000, iterations: int = 10, query_age: int = 30) -> None:
+def run_benchmarks(
+    n: int = 10000,
+    iterations: int = 10,
+    query_age: int = 30,
+    *,
+    seed: Optional[int] = 42,
+) -> BenchmarkResult:
     """
     Runs benchmarks for three cases:
       1. Without an index.
@@ -93,6 +101,10 @@ def run_benchmarks(n: int = 10000, iterations: int = 10, query_age: int = 30) ->
     :param iterations: Number of iterations to run the query for timing.
     :param query_age: The age value used in the query condition.
     """
+    # Deterministic dataset for fair comparison
+    if seed is not None:
+        random.seed(seed)
+
     # Without index
     table_no_index = populate_table(n)
     time_no_index = benchmark_query(table_no_index, query_age, iterations)
@@ -105,14 +117,78 @@ def run_benchmarks(n: int = 10000, iterations: int = 10, query_age: int = 30) ->
     table_sorted = populate_table(n, index_type="sorted")
     time_sorted = benchmark_query(table_sorted, query_age, iterations)
 
-    print(
-        f"\nPopulating table with {n} records and benchmarking queries over {iterations} iterations..."
-    )
-    print("Average query time without index: {:.6f} seconds".format(time_no_index))
-    print("Average query time with hash index: {:.6f} seconds".format(time_hash))
-    print("Average query time with sorted index: {:.6f} seconds\n".format(time_sorted))
+    return {
+        "without_index": time_no_index,
+        "hash_index": time_hash,
+        "sorted_index": time_sorted,
+    }
 
 
 if __name__ == "__main__":
-    # Run the benchmark with cProfile and sort the output by cumulative time.
-    cProfile.run("run_benchmarks(n=10000, iterations=10, query_age=30)", sort="cumtime")
+    parser = argparse.ArgumentParser(description="Benchmark DictDB select performance")
+    parser.add_argument("--rows", type=int, default=10000, help="Number of records")
+    parser.add_argument(
+        "--iterations", type=int, default=10, help="Iterations per case"
+    )
+    parser.add_argument("--age", type=int, default=30, help="Age value to query")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for data")
+    parser.add_argument(
+        "--profile", action="store_true", help="Profile the run with cProfile"
+    )
+    parser.add_argument(
+        "--json-out", type=str, default=None, help="Write results to JSON file"
+    )
+    args = parser.parse_args()
+
+    # Reduce logging overhead to not skew results
+    configure_logging(level="WARNING", console=False, logfile=None)
+
+    def _runner() -> None:
+        results = run_benchmarks(
+            n=args.rows, iterations=args.iterations, query_age=args.age, seed=args.seed
+        )
+        # Pretty print
+        print(
+            f"\nRows={args.rows}, iterations={args.iterations}, query_age={args.age}, seed={args.seed}"
+        )
+        print(
+            "Average query time without index: {:.6f} s".format(
+                results["without_index"]
+            )
+        )
+        print(
+            "Average query time with hash index: {:.6f} s".format(results["hash_index"])
+        )
+        print(
+            "Average query time with sorted index: {:.6f} s".format(
+                results["sorted_index"]
+            )
+        )
+        # Speedups
+        if results["without_index"] > 0:
+            print(
+                "Hash speedup:  x{:.2f}".format(
+                    results["without_index"] / results["hash_index"]
+                )
+            )
+            print(
+                "Sorted speedup: x{:.2f}".format(
+                    results["without_index"] / results["sorted_index"]
+                )
+            )
+        if args.json_out:
+            payload = {
+                "rows": args.rows,
+                "iterations": args.iterations,
+                "age": args.age,
+                "seed": args.seed,
+                "results": results,
+            }
+            with open(args.json_out, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+            print(f"Results written to {args.json_out}")
+
+    if args.profile:
+        cProfile.runctx("_runner()", globals(), locals(), sort="cumtime")
+    else:
+        _runner()

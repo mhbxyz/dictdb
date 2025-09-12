@@ -25,3 +25,4 @@ condition_or = Condition((users.name == "Alice") | (users.age > 25))
 # NOT (name == "Alice")
 condition_not = Condition(~(users.name == "Alice"))
 ```
+

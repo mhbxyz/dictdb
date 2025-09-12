@@ -1,123 +1,21 @@
 import operator
-from typing import Any, Optional, Dict, List, Callable, cast
+from typing import Any, Optional, Dict, List, cast, Tuple, Union
 
-from .exceptions import SchemaValidationError, DuplicateKeyError, RecordNotFoundError
-from .condition import PredicateExpr, Condition
-from .index import IndexBase, HashIndex, SortedIndex
-from .logging import logger
+from ..exceptions import (
+    SchemaValidationError,
+    DuplicateKeyError,
+    RecordNotFoundError,
+)
+from .condition import Condition
+from ..index import IndexBase
+from ..index.registry import create as create_index
+from ..obs.logging import logger
 from .types import Record, Schema
+from .field import Field, _FieldCondition
 
 
-class _FieldCondition:
-    """
-    A callable class representing a condition on a field.
-
-    It encapsulates the field name, a value to compare, and an operator function.
-    """
-
-    def __init__(self, field: str, value: Any, op: Callable[[Any, Any], bool]) -> None:
-        """
-        Initializes a _FieldCondition instance.
-
-        :param field: The name of the field.
-        :param value: The value to compare against.
-        :param op: A binary operator function (e.g., operator.eq, operator.lt).
-        """
-        self.field: str = field
-        self.value: Any = value
-        self.op: Callable[[Any, Any], bool] = op
-
-    def __call__(self, record: Dict[str, Any]) -> bool:
-        """
-        Evaluates the condition on the given record.
-
-        :param record: The record (dictionary) to evaluate.
-        :type record: dict
-        :return: True if the condition is satisfied; otherwise False.
-        :rtype: bool
-        """
-        return self.op(record.get(self.field), self.value)
-
-
-class Field:
-    """
-    Represents a field (column) in a table and overloads comparison operators
-    to produce Condition instances.
-
-    Instances of Field are created dynamically by the Table via attribute lookup.
-    """
-
-    def __init__(self, table: "Table", name: str) -> None:
-        """
-        Initializes a Field tied to a specific table and field name.
-
-        :param table: The Table this field belongs to.
-        :type table: Table
-        :param name: The name of the field.
-        :type name: str
-        """
-        self.table = table
-        self.name = name
-
-    def __eq__(self, other: Any) -> PredicateExpr:  # type: ignore[override]
-        """
-        Creates a Condition checking for equality.
-
-        :param other: A value to compare against.
-        :type other: Any
-        :return: A Condition instance.
-        """
-        return PredicateExpr(_FieldCondition(self.name, other, operator.eq))
-
-    def __ne__(self, other: Any) -> PredicateExpr:  # type: ignore[override]
-        """
-        Creates a Condition checking for inequality.
-
-        :param other: A value to compare against.
-        :type other: Any
-        :return: A Condition instance.
-        """
-        return PredicateExpr(_FieldCondition(self.name, other, operator.ne))
-
-    def __lt__(self, other: Any) -> PredicateExpr:
-        """
-        Creates a Condition checking for less-than.
-
-        :param other: A value to compare against.
-        :type other: Any
-        :return: A Condition instance.
-        """
-        return PredicateExpr(_FieldCondition(self.name, other, operator.lt))
-
-    def __le__(self, other: Any) -> PredicateExpr:
-        """
-        Creates a Condition checking for less-than-or-equal.
-
-        :param other: A value to compare against.
-        :type other: Any
-        :return: A Condition instance.
-        """
-        return PredicateExpr(_FieldCondition(self.name, other, operator.le))
-
-    def __gt__(self, other: Any) -> PredicateExpr:
-        """
-        Creates a Condition checking for greater-than.
-
-        :param other: A value to compare against.
-        :type other: Any
-        :return: A Condition instance.
-        """
-        return PredicateExpr(_FieldCondition(self.name, other, operator.gt))
-
-    def __ge__(self, other: Any) -> PredicateExpr:
-        """
-        Creates a Condition checking for greater-than-or-equal.
-
-        :param other: A value to compare against.
-        :type other: Any
-        :return: A Condition instance.
-        """
-        return PredicateExpr(_FieldCondition(self.name, other, operator.ge))
+class _RemovedField:
+    pass
 
 
 class Table:
@@ -194,13 +92,7 @@ class Table:
         if field in self.indexes:
             return
         try:
-            index_instance: IndexBase
-            if index_type == "hash":
-                index_instance = HashIndex()
-            elif index_type == "sorted":
-                index_instance = SortedIndex()
-            else:
-                raise ValueError("Unsupported index type. Use 'hash' or 'sorted'.")
+            index_instance: IndexBase = create_index(index_type)
             # Populate the index with existing records.
             for pk, record in self.records.items():
                 if field in record:
@@ -265,9 +157,10 @@ class Table:
         :param where: The Condition wrapper.
         :return: True if the condition is a simple equality on an indexed field.
         """
-        func = cast(_FieldCondition, where.condition.func)
-        if func.op == operator.eq and func.field in self.indexes:
-            return True
+        func = where.condition.func
+        if isinstance(func, _FieldCondition):
+            if func.op == operator.eq and func.field in self.indexes:
+                return True
         return False
 
     def validate_record(self, record: Record) -> None:
@@ -325,15 +218,29 @@ class Table:
         ).info("Record inserted into '{table}' (pk={pk}).")
 
     def select(
-        self, columns: Optional[List[str]] = None, where: Optional[Condition] = None
+        self,
+        columns: Optional[
+            Union[List[str], Dict[str, str], List[Tuple[str, str]]]
+        ] = None,
+        where: Optional[Condition] = None,
+        *,
+        order_by: Optional[Union[str, List[str], Tuple[str, ...]]] = None,
+        limit: Optional[int] = None,
+        offset: int = 0,
     ) -> List[Record]:
         """
         Retrieves records matching an optional condition.
 
         If the condition is a simple equality on an indexed field, the index is used.
 
-        :param columns: List of fields to include in each returned record. If None, returns full records.
+        :param columns: Projection of fields to include. Can be:
+                        - list of field names (str)
+                        - dict of alias -> field name
+                        - list of (alias, field) tuples
         :param where: A Condition used to filter records.
+        :param order_by: Field name or list of field names to sort by. Prefix with '-' for descending.
+        :param limit: Maximum number of records to return after offset.
+        :param offset: Number of records to skip from the start.
         :return: A list of matching records.
         """
         logger.bind(table=self.table_name, op="SELECT").debug(
@@ -349,13 +256,20 @@ class Table:
             candidate_records = [self.records[pk] for pk in candidate_pks]
         else:
             candidate_records = list(self.records.values())
+        # Filter
+        filtered_records: List[Record] = []
         for record in candidate_records:
             if where is None or where(record):
-                if columns:
-                    filtered = {col: record.get(col) for col in columns}
-                    results.append(filtered)
-                else:
-                    results.append(record)
+                filtered_records.append(record)
+
+        # Order
+        from ..query.order import order_records
+        from ..query.pager import slice_records
+        from ..query.projection import project_records
+
+        ordered = order_records(filtered_records, order_by)
+        sliced_records = slice_records(ordered, limit=limit, offset=offset)
+        results = project_records(sliced_records, columns)
         return results
 
     def update(self, changes: Record, where: Optional[Condition] = None) -> int:

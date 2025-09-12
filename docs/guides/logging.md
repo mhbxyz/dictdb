@@ -38,3 +38,4 @@ Example JSON line:
 ```json
 {"time": "...", "level": "INFO", "message": "Updated 2 record(s) in 'users'.", "table": "users", "op": "UPDATE", "count": 2}
 ```
+

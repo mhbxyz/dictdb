@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Union
 
 from .database import DictDB
-from .logging import logger
+from ..obs.logging import logger
 
 
 class BackupManager:
