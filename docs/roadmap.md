@@ -56,9 +56,6 @@ This roadmap focuses on concrete improvements and extensions derived from the cu
 - Optional fast JSON backend behind a feature flag; micro‑opt index paths.
 - Acceptance: reduced peak memory during save; no API changes.
 
-12) API Polish & Types
-- Add `Table.columns()`, `Table.size()`, and introspection helpers; tighten types (TypedDict/Protocol) and reduce `Any`/`cast`.
-- Acceptance: `mypy src` passes in strict mode; improved IDE hints.
 
 ## Nice‑To‑Haves
 - Generated API docs (pdoc/Sphinx) with examples and tutorial notebooks.
