@@ -36,6 +36,7 @@ class BenchmarkResult(TypedDict):
         hash_index: Average query execution time (in seconds) with a hash index.
         sorted_index: Average query execution time (in seconds) with a sorted index.
     """
+
     without_index: float
     hash_index: float
     sorted_index: float
@@ -52,7 +53,9 @@ def populate_table(n: int, index_type: str = None) -> Table:
     :param index_type: Type of index to create ("hash" or "sorted"), or None.
     :return: A populated Table instance.
     """
-    table = Table("benchmark_table", primary_key="id", schema={"id": int, "name": str, "age": int})
+    table = Table(
+        "benchmark_table", primary_key="id", schema={"id": int, "name": str, "age": int}
+    )
     for i in range(1, n + 1):
         age = random.randint(20, 60)
         table.insert({"id": i, "name": f"Name{i}", "age": age})
@@ -102,7 +105,9 @@ def run_benchmarks(n: int = 10000, iterations: int = 10, query_age: int = 30) ->
     table_sorted = populate_table(n, index_type="sorted")
     time_sorted = benchmark_query(table_sorted, query_age, iterations)
 
-    print(f"\nPopulating table with {n} records and benchmarking queries over {iterations} iterations...")
+    print(
+        f"\nPopulating table with {n} records and benchmarking queries over {iterations} iterations..."
+    )
     print("Average query time without index: {:.6f} seconds".format(time_no_index))
     print("Average query time with hash index: {:.6f} seconds".format(time_hash))
     print("Average query time with sorted index: {:.6f} seconds\n".format(time_sorted))

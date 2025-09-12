@@ -25,7 +25,7 @@ class DictDB:
         self.tables: Dict[str, Table] = {}
         logger.info("Initialized an empty DictDB instance.")
 
-    def create_table(self, table_name: str, primary_key: str = 'id') -> None:
+    def create_table(self, table_name: str, primary_key: str = "id") -> None:
         """
         Creates a new table in the database.
 
@@ -37,7 +37,9 @@ class DictDB:
         :return: None
         :rtype: None
         """
-        logger.debug(f"[DictDB] Creating table '{table_name}' with primary key '{primary_key}'.")
+        logger.debug(
+            f"[DictDB] Creating table '{table_name}' with primary key '{primary_key}'."
+        )
         if table_name in self.tables:
             raise ValueError(f"Table '{table_name}' already exists.")
         self.tables[table_name] = Table(table_name, primary_key)
@@ -107,7 +109,10 @@ class DictDB:
                 for table_name, table in self.tables.items():
                     schema = None
                     if table.schema is not None:
-                        schema = {field: table.schema[field].__name__ for field in table.schema}
+                        schema = {
+                            field: table.schema[field].__name__
+                            for field in table.schema
+                        }
                     state["tables"][table_name] = {
                         "primary_key": table.primary_key,
                         "schema": schema,
@@ -115,6 +120,7 @@ class DictDB:
                     }
                 # Use StringIO to produce a JSON string.
                 from io import StringIO
+
                 s = StringIO()
                 json.dump(state, s, indent=4)
                 json_content: str = s.getvalue()
@@ -123,13 +129,16 @@ class DictDB:
             case "pickle":
                 # Use BytesIO to produce pickle bytes.
                 from io import BytesIO
+
                 b = BytesIO()
                 pickle.dump(self, b)
                 pickled_content: bytes = b.getvalue()
                 with open(filename, "wb") as f:
                     f.write(pickled_content)
             case _:
-                raise ValueError("Unsupported file_format. Please use 'json' or 'pickle'.")
+                raise ValueError(
+                    "Unsupported file_format. Please use 'json' or 'pickle'."
+                )
 
     @classmethod
     def _load_from_json(cls, filename: str) -> "DictDB":
@@ -145,7 +154,14 @@ class DictDB:
         with open(filename, "r", encoding="utf-8") as f:
             state = json.load(f)
         new_db = cls()
-        allowed_types = {"int": int, "str": str, "float": float, "bool": bool, "list": list, "dict": dict}
+        allowed_types = {
+            "int": int,
+            "str": str,
+            "float": float,
+            "bool": bool,
+            "list": list,
+            "dict": dict,
+        }
         for table_name, table_data in state["tables"].items():
             primary_key = table_data["primary_key"]
             schema_data = table_data["schema"]
@@ -191,7 +207,9 @@ class DictDB:
                     db = pickle.load(f)
                 return cast(DictDB, db)
             case _:
-                raise ValueError("Unsupported file_format. Please use 'json' or 'pickle'.")
+                raise ValueError(
+                    "Unsupported file_format. Please use 'json' or 'pickle'."
+                )
 
     async def async_save(self, filename: Union[str, Path], file_format: str) -> None:
         """

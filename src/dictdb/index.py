@@ -61,6 +61,7 @@ class HashIndex(IndexBase):
     """
     An index implementation using a hash map (Python dict).
     """
+
     def __init__(self) -> None:
         self.index: dict[Any, Set[Any]] = {}
 
@@ -89,6 +90,7 @@ class SortedIndex(IndexBase):
     A simple sorted index that uses a sorted list to simulate B-tree behavior.
     Not as efficient as a real B-tree for large datasets, but useful for demonstration.
     """
+
     def __init__(self) -> None:
         # Store tuples of (value, pk) in a sorted list.
         self.sorted_list: List[tuple[Any, Any]] = []

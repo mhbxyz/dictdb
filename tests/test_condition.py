@@ -1,4 +1,4 @@
-from dictdb import Table, Query
+from dictdb import Table, Condition
 
 
 def test_field_equality(table: Table) -> None:
@@ -10,8 +10,8 @@ def test_field_equality(table: Table) -> None:
     :return: None
     :rtype: None
     """
-    # Wrap the condition in Query so that it can be used without triggering
-    condition = Query(table.name == "Alice")
+    # Wrap the predicate in Condition so it can be used safely
+    condition = Condition(table.name == "Alice")
     record = {"name": "Alice"}
     assert condition(record) is True
     record = {"name": "Bob"}
@@ -27,12 +27,12 @@ def test_comparison_operators(table: Table) -> None:
     :return: None
     :rtype: None
     """
-    eq_cond = Query(table.age == 30)
-    ne_cond = Query(table.age != 30)
-    lt_cond = Query(table.age < 30)
-    le_cond = Query(table.age <= 30)
-    gt_cond = Query(table.age > 30)
-    ge_cond = Query(table.age >= 30)
+    eq_cond = Condition(table.age == 30)
+    ne_cond = Condition(table.age != 30)
+    lt_cond = Condition(table.age < 30)
+    le_cond = Condition(table.age <= 30)
+    gt_cond = Condition(table.age > 30)
+    ge_cond = Condition(table.age >= 30)
 
     record = {"age": 30}
     assert eq_cond(record)
@@ -61,14 +61,14 @@ def test_logical_operators(table: Table) -> None:
     :rtype: None
     """
     # Logical AND: (name == "Alice") AND (age > 25)
-    condition = Query((table.name == "Alice") & (table.age > 25))
+    condition = Condition((table.name == "Alice") & (table.age > 25))
     record = {"name": "Alice", "age": 30}
     assert condition(record)
     record = {"name": "Alice", "age": 20}
     assert not condition(record)
 
     # Logical OR: (name == "Alice") OR (age > 25)
-    condition = Query((table.name == "Alice") | (table.age > 25))
+    condition = Condition((table.name == "Alice") | (table.age > 25))
     record = {"name": "Bob", "age": 30}
     assert condition(record)
     record = {"name": "Alice", "age": 20}
@@ -77,7 +77,7 @@ def test_logical_operators(table: Table) -> None:
     assert not condition(record)
 
     # Logical NOT: NOT (name == "Alice")
-    condition = Query(~(table.name == "Alice"))
+    condition = Condition(~(table.name == "Alice"))
     record = {"name": "Bob"}
     assert condition(record)
     record = {"name": "Alice"}

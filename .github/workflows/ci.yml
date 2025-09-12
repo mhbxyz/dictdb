@@ -7,76 +7,68 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      # Checks out your code so that subsequent steps can access it
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        id: setup-python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version-file: .python-version
 
-      # Install 'uv' so we can manage dependencies and commands with Astral/uv
-      - name: Install uv
-        run: |
-          pip install uv
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
 
-      # Pull pinned dependencies defined in uv.lock
-      - name: Sync with uv.lock
-        run: |
-          uv sync
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
 
-      # Run Ruff for code style and lint checks, targeting your src/dictdb directory
+      - name: Sync with uv.lock (dev)
+        run: uv sync --group dev
+
       - name: Lint (Ruff)
-        run: |
-          uv run ruff check src/dictdb
+        run: uv run ruff check . --output-format=github
 
-      # Enforce static type checks in 'dictdb' and 'tests' directories
       - name: Type check (mypy)
-        run: |
-          uv run mypy --strict src/dictdb tests
+        run: uv run mypy --strict src/dictdb tests
 
-      # Execute Pytest with coverage, then generate a coverage report
+      - name: Cache MyPy
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: .mypy_cache
+          key: mypy-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('uv.lock') }}
+
       - name: Test with Coverage
         run: |
-          uv run coverage run -m pytest --maxfail=1 --disable-warnings
+          uv run coverage run -m pytest --maxfail=1 --disable-warnings -q
           uv run coverage report -m
+          uv run coverage xml
 
-  release:
-    needs: [ lint-and-test ]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
         with:
-          fetch-depth: 0
+          name: coverage-xml
+          path: coverage.xml
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
+      - name: Install build backend (hatchling)
+        run: uv pip install hatchling
 
-      - name: Install uv
-        run: |
-          pip install uv
-
-      - name: Sync with uv.lock
-        run: |
-          uv sync
-
-      - name: Semantic Release
-        run: |
-          uv run semantic-release version
-          uv run semantic-release changelog
-          uv run semantic-release publish
-        env:
-          # Required for generating GitHub release
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Required only if you set 'upload_to_pypi=true'
-          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      - name: Build package (sanity)
+        run: uv run python -m hatchling build -t sdist -t wheel

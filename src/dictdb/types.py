@@ -1,10 +1,6 @@
 from typing import Any, Dict, Callable, Type
 
-__all__ = [
-    "Record",
-    "Schema",
-    "Predicate"
-]
+__all__ = ["Record", "Schema", "Predicate"]
 
 Record = Dict[str, Any]
 """

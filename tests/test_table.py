@@ -2,7 +2,13 @@ from typing import Any, Dict
 
 import pytest
 
-from dictdb import Table, Query, DuplicateKeyError, RecordNotFoundError, SchemaValidationError
+from dictdb import (
+    Table,
+    Condition,
+    DuplicateKeyError,
+    RecordNotFoundError,
+    SchemaValidationError,
+)
 
 
 def test_insert_valid_record(table: Table) -> None:
@@ -34,7 +40,7 @@ def test_insert_auto_assign_primary_key(table: Table) -> None:
     assert "id" in new_record
     assert new_record["id"] == 3
     # Confirm the record is retrievable via the auto-assigned key.
-    records = table.select(where=Query(table.id == new_record["id"]))
+    records = table.select(where=Condition(table.id == new_record["id"]))
     assert len(records) == 1
 
 
@@ -73,7 +79,7 @@ def test_select_with_where(table: Table) -> None:
     :return: None
     :rtype: None
     """
-    condition = Query(table.name == "Alice")
+    condition = Condition(table.name == "Alice")
     records = table.select(where=condition)
     assert len(records) == 1
     assert records[0]["name"] == "Alice"
@@ -88,7 +94,7 @@ def test_select_with_columns(table: Table) -> None:
     :return: None
     :rtype: None
     """
-    records = table.select(columns=["name"], where=Query(table.age >= 25))
+    records = table.select(columns=["name"], where=Condition(table.age >= 25))
     for rec in records:
         assert "name" in rec
         assert "age" not in rec
@@ -103,9 +109,9 @@ def test_update_records(table: Table) -> None:
     :return: None
     :rtype: None
     """
-    updated = table.update({"age": 26}, where=Query(table.name == "Bob"))
+    updated = table.update({"age": 26}, where=Condition(table.name == "Bob"))
     assert updated == 1
-    records = table.select(where=Query(table.name == "Bob"))
+    records = table.select(where=Condition(table.name == "Bob"))
     assert records[0]["age"] == 26
 
 
@@ -119,7 +125,7 @@ def test_update_no_match(table: Table) -> None:
     :rtype: None
     """
     with pytest.raises(RecordNotFoundError):
-        table.update({"age": 35}, where=Query(table.name == "Nonexistent"))
+        table.update({"age": 35}, where=Condition(table.name == "Nonexistent"))
 
 
 def test_delete_records(table: Table) -> None:
@@ -131,7 +137,7 @@ def test_delete_records(table: Table) -> None:
     :return: None
     :rtype: None
     """
-    deleted = table.delete(where=Query(table.name == "Bob"))
+    deleted = table.delete(where=Condition(table.name == "Bob"))
     assert deleted == 1
     records = table.select()
     assert len(records) == 1
@@ -147,7 +153,7 @@ def test_delete_no_match(table: Table) -> None:
     :rtype: None
     """
     with pytest.raises(RecordNotFoundError):
-        table.delete(where=Query(table.name == "Nonexistent"))
+        table.delete(where=Condition(table.name == "Nonexistent"))
 
 
 def test_insert_valid_record_with_schema() -> None:
@@ -215,7 +221,7 @@ def test_auto_assign_primary_key_with_schema() -> None:
     new_record = {"name": "Bob", "age": 25}
     table.insert(new_record)
     assert "id" in new_record and isinstance(new_record["id"], int)
-    records = table.select(where=Query(table.id == new_record["id"]))
+    records = table.select(where=Condition(table.id == new_record["id"]))
     assert len(records) == 1
 
 

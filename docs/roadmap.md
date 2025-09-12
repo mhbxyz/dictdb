@@ -1,176 +1,70 @@
-~~### Issue 1: Project Setup and Repository Structure~~
-**Description:**  
-- **Repository Layout:**  
-  - Create a clear project structure with directories such as `/src` for core code and `/tests` for unit/integration tests.  
-  - Include configuration files like `pyproject.toml` or `setup.py`, `.gitignore`, and environment setup files (e.g., for virtual environments).  
-- **CI/CD Integration:**  
-  - Set up GitHub Actions to automate testing and build workflows.  
-- **Branching Strategy:**  
-  - Define branch policies (e.g., main for production, develop for integration, feature branches for new work).
+# Roadmap
 
-**Tags:** `setup`, `initial`  
-**Milestone:** *v0.1 Initial Release*
+This roadmap focuses on concrete improvements and extensions derived from the current codebase. Use it to file issues, group milestones, and track progress.
 
----
+## Prioritized Improvements
+1) Concurrency & Thread Safety
+- Add table‑scoped RW locks; guard CRUD and index updates; ensure `BackupManager` reads consistent snapshots.
+- Optional snapshotting before save to reduce lock contention.
+- Acceptance: no races between writes and save/backup; concurrent tests pass.
 
-~~### Issue 2: API Design and SQL-Style CRUD Specification~~
-**Description:**  
-- **High-Level API:**  
-  - Define a primary class (e.g., `DictDB`) that represents the in-memory database.  
-- **SQL Mapping:**  
-  - Map SQL operations to Python methods:  
-    - **INSERT:** `insert_record(record: dict)` – Add a new record.  
-    - **SELECT:** `select_records(columns: list = None, where: callable = None)` – Retrieve records with optional projections and filtering, emulating SQL’s `SELECT` with a `WHERE` clause.  
-    - **UPDATE:** `update_records(changes: dict, where: callable = None)` – Modify records that meet specified conditions.  
-    - **DELETE:** `delete_records(where: callable = None)` – Remove records based on a condition.  
-- **Error Handling & Constraints:**  
-  - Specify error types for constraint violations (e.g., duplicate keys) similar to SQL’s integrity errors.  
-  - Define behavior for edge cases (e.g., no record matches, ambiguous queries).
+2) Robust, Atomic Persistence
+- JSON/pickle: write to temp + `fsync` + atomic `replace()`; add `_meta` = `{format: "dictdb", version: 1}` and checksum.
+- Strict loader: validate `_meta` and reject mismatches.
+- Acceptance: crash simulations never corrupt files; loader detects invalid inputs.
 
-**Tags:** `design`, `API`, `SQL`, `planning`  
-**Milestone:** *v0.1 Initial Release*
+3) Indexing & Simple Planner
+- Use `SortedIndex` for range queries (`<, <=, >, >=`) and BETWEEN.
+- Add composite and unique indexes; `rebuild_index(field)` and stats for selectivity hints.
+- Acceptance: range filters avoid full scans; uniqueness enforced; benchmarks show speedups.
 
----
+4) Query DSL & Results
+- Add `IN`, `contains`, `startswith/endswith`, `order_by`, `limit/offset`, projections with aliases.
+- Provide a tiny expression parser reused by the CLI (string → `Query`).
+- Acceptance: new operators covered by tests; deterministic ordering and pagination.
 
-~~### Issue 3: Core SQL-Style CRUD Operations Implementation~~
-**Description:**  
-- **INSERT Operation:**  
-  - Implement record insertion with schema validation (if a schema is defined).  
-  - Validate uniqueness or other constraints before insertion.  
-- **SELECT Operation:**  
-  - Develop a query engine that supports SQL-like filtering (e.g., `WHERE` clause as a lambda or function).  
-  - Support projections (selecting specific keys) and wildcard selection (`SELECT *`).  
-- **UPDATE Operation:**  
-  - Enable record modifications by applying user-defined conditions.  
-  - Ensure atomicity where possible so that partial updates are avoided.  
-- **DELETE Operation:**  
-  - Remove records based on a filter condition, with safety checks to prevent accidental mass deletions.  
-- **Testing:**  
-  - Develop unit tests for normal operations, edge cases, and SQL-like behavior consistency.
+5) Schema & Validation
+- Copy `schema` on `Table.__init__` before mutating; support `defaults`, `nullable`, coercion hooks, and field validators.
+- Add unique constraints independent of PK.
+- Acceptance: no caller side‑effects; helpful, typed errors; validation optional but predictable.
 
-**Tags:** `feature`, `CRUD`, `SQL`  
-**Milestone:** *v0.1 Initial Release*
+6) Primary Key Strategies
+- Support `pk_generator: Callable[[], Any]`; guard auto‑int to integers; document monotonic guarantees.
+- Acceptance: custom PK works across insert/update/delete; collision tests included.
 
----
+7) Logging & Observability
+- Fix `configure_logging()` to use Loguru `{}` formatting; add structured context (table, op, counts), optional JSON logs.
+- Sampling for verbose paths; consistent levels across modules.
+- Acceptance: zero `%s` artifacts; fields present in debug logs.
 
-### Issue 4: SQL Query Parser and Execution Engine
-**Description:**  
-- **Parser Development:**  
-  - Design a lightweight SQL parser that converts SQL-like strings into executable operations on the dictionary.  
-  - **Lexical Analysis:** Tokenize input strings into keywords (SELECT, INSERT, UPDATE, DELETE), fields, and conditions.  
-  - **Syntax Parsing:** Build an abstract syntax tree (AST) representing the SQL command.  
-- **Execution Engine:**  
-  - Map parsed AST components to the corresponding `DictDB` methods.  
-  - Validate queries and return detailed error messages for syntax or semantic errors.  
-- **Scope:**  
-  - Initially support a subset of SQL (e.g., basic SELECT, INSERT, UPDATE, DELETE) with WHERE clause conditions.  
-- **Testing:**  
-  - Write comprehensive tests with various SQL queries to ensure correct parsing and execution.
+8) Backup Manager Enhancements
+- Retention policy (max files/age), compression option, backoff on repeated failures.
+- Skip backups if unchanged since last snapshot; expose `on_success`/`on_error` hooks.
+- Acceptance: predictable retention; fewer redundant backups; surfaced errors.
 
-**Tags:** `feature`, `SQL-parser`, `deferred`, `query-engine`  
-**Milestone:** *v0.2 Query Support*
+9) Transactions & Batching
+- Context‑manager transactions with rollback on error; batch insert/update with partial‑failure reporting.
+- Acceptance: atomic multi‑record changes; property tests confirm invariants.
 
----
+10) CLI
+- Ship a `dictdb` CLI: `init`, `load <path>`, `query "<expr>"`, `export --format json|csv` with exit codes.
+- Packaging via `pyproject.toml` `[project.scripts]`; integration tests under `tests/test_cli.py`.
+- Acceptance: smoke tests pass; docs include examples.
 
-### Issue 5: Transaction Management and Concurrency Control
-**Description:**  
-- **Transaction Layer:**  
-  - Implement methods to begin, commit, and roll back transactions:  
-    - `begin_transaction()`, `commit_transaction()`, and `rollback_transaction()`.  
-- **Atomicity & Isolation:**  
-  - Ensure that a batch of SQL-like operations (e.g., multiple INSERT/UPDATE statements) can be treated as a single atomic unit.  
-  - Consider implementing a simple locking mechanism or using optimistic concurrency control to prevent conflicts during concurrent operations.  
-- **Logging & Recovery:**  
-  - Record operations during a transaction for easier rollback and debugging.  
-- **Testing:**  
-  - Develop tests that simulate concurrent access and verify that transactions maintain data integrity.
+11) Performance & Memory
+- Stream JSON directly without building a large intermediate state; avoid unnecessary copies in `select()`.
+- Optional fast JSON backend behind a feature flag; micro‑opt index paths.
+- Acceptance: reduced peak memory during save; no API changes.
 
-**Tags:** `feature`, `transactions`, `concurrency`  
-**Milestone:** *v0.4 Transactions and Concurrency*
+12) API Polish & Types
+- Add `Table.columns()`, `Table.size()`, and introspection helpers; tighten types (TypedDict/Protocol) and reduce `Any`/`cast`.
+- Acceptance: `mypy src` passes in strict mode; improved IDE hints.
 
----
+## Nice‑To‑Haves
+- Generated API docs (pdoc/Sphinx) with examples and tutorial notebooks.
+- Export/import connectors (CSV, NDJSON) and a simple HTTP server for remote access.
+- CI micro‑benchmarks with trend reporting.
 
-~~### Issue 6: Indexing and Performance Optimization~~
-**Description:**  
-- **Index Design:**  
-  - Allow users to create indexes on specific dictionary keys to accelerate SELECT queries.  
-  - Implement automatic index updates on INSERT, UPDATE, and DELETE operations.  
-- **Data Structures:**  
-  - Evaluate and use efficient data structures (e.g., hash maps, B-trees) for maintaining indices.  
-- **Benchmarking:**  
-  - Benchmark query performance with and without indexing on larger datasets.  
-  - Optimize indexing algorithms based on profiling results.  
-- **Fallback Mechanisms:**  
-  - Ensure that if index creation fails, the system continues to operate correctly using full scans.
-
-**Tags:** `performance`, `optimization`, `feature`  
-**Milestone:** *v0.2 Query Support*
-
----
-
-~~### Issue 7: Persistence and Serialization Mechanism~~
-**Description:**  
-- **Save/Load Operations:**  
-  - Implement methods such as `save_database(filename: str, format: str)` and `load_database(filename: str, format: str)` to persist the in-memory state.  
-- **Supported Formats:**  
-  - Support multiple formats like JSON for readability and pickle for speed and efficiency.  
-- **Backup & Recovery:**  
-  - Design an automatic backup system that saves the current state periodically or after significant changes.  
-- **Non-Blocking I/O:**  
-  - Ensure that save/load operations do not block ongoing database operations by considering asynchronous I/O or background processes.  
-- **Testing:**  
-  - Validate that the database state remains consistent across multiple save/load cycles.
-
-**Tags:** `persistence`, `storage`, `feature`  
-**Milestone:** *v0.3 Persistence and Storage*
-
----
-
-~~### Issue 8: Error Handling, Logging, and SQL Error Emulation~~
-**Description:**  
-- **Standardized Errors:**  
-  - Define custom exception classes that mimic SQL error codes (e.g., integrity constraint violations, syntax errors).  
-- **Logging Framework:**  
-  - Integrate Python’s logging module to capture detailed logs of query executions, transactions, and error events.  
-  - Allow users to configure log levels and outputs (console, file, etc.).  
-- **Error Reporting:**  
-  - Ensure that the SQL parser and CRUD operations return clear, actionable error messages to the user, similar to traditional SQL databases.  
-- **Testing:**  
-  - Simulate various error conditions (malformed queries, invalid data) and verify that error handling behaves as expected.
-
-**Tags:** `error-handling`, `logging`, `SQL`  
-**Milestone:** *v0.1 Initial Release*
-
----
-
-~~### Issue 9: Packaging, Distribution, and CI/CD Integration~~
-**Description:**  
-- **Packaging:**  
-  - Finalize package metadata in `setup.py` or `pyproject.toml` including versioning, dependencies, and entry points.  
-- **Automated Testing:**  
-  - Ensure that tests, linting, and code coverage checks are part of the CI/CD pipeline via GitHub Actions.  
-- **Release Workflow:**  
-  - Automate the release process, including tagging and publishing to PyPI.  
-- **Versioning:**  
-  - Adopt semantic versioning and integrate tools to automate version bumping and release notes generation.
-
-**Tags:** `packaging`, `CI`, `release`, `automation`  
-**Milestone:** *v0.1 Initial Release*
-
----
-
-### Issue 10: Advanced SQL Features and Future Enhancements
-**Description:**  
-- **Aggregate Functions:**  
-  - Explore adding SQL-like aggregate functions (e.g., COUNT, SUM, AVG) that can operate on the dictionary data.  
-- **JOIN-like Operations:**  
-  - Investigate the feasibility of supporting JOIN operations on nested dictionaries to mimic relational database behavior.  
-- **Subqueries and Complex Filters:**  
-  - Consider implementing support for subqueries or nested queries for advanced data retrieval scenarios.  
-- **User-Defined Functions:**  
-  - Allow users to define custom functions to be used in WHERE clauses or as computed columns.  
-- **Performance & Scalability:**  
-  - Prototype these advanced features and measure performance impacts, with plans for incremental integration based on user feedback.
-
-**Tags:** `advanced`, `research`, `feature`  
-**Milestone:** *v0.5 Advanced Features*
+## Notes
+- Keep read paths fast with read locks and short critical sections.
+- Add concurrency and corruption tests; include range‑index benchmarks.

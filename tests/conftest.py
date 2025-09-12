@@ -21,6 +21,7 @@ def table() -> Table:
     tbl.insert({"id": 2, "name": "Bob", "age": 25})
     return tbl
 
+
 @pytest.fixture
 def db() -> DictDB:
     """
@@ -33,6 +34,7 @@ def db() -> DictDB:
     database.create_table("users")
     database.create_table("products")
     return database
+
 
 @pytest.fixture
 def log_capture() -> Iterator[List[str]]:
@@ -61,6 +63,7 @@ def log_capture() -> Iterator[List[str]]:
     # Remove the capture sink after test completes (cleanup).
     logger.remove()
 
+
 @pytest.fixture
 def test_db(tmp_path: Path) -> DictDB:
     """
@@ -77,6 +80,7 @@ def test_db(tmp_path: Path) -> DictDB:
     table.insert({"id": 1, "name": "Test", "age": 100})
     return db
 
+
 @pytest.fixture(params=["hash", "sorted"])
 def indexed_table(request: FixtureRequest) -> Table:
     """
@@ -86,7 +90,9 @@ def indexed_table(request: FixtureRequest) -> Table:
     :param request: The pytest fixture request object.
     :return: A prepopulated Table instance.
     """
-    table = Table("people", primary_key="id", schema={"id": int, "name": str, "age": int})
+    table = Table(
+        "people", primary_key="id", schema={"id": int, "name": str, "age": int}
+    )
     table.insert({"id": 1, "name": "Alice", "age": 30})
     table.insert({"id": 2, "name": "Bob", "age": 25})
     table.insert({"id": 3, "name": "Charlie", "age": 30})
