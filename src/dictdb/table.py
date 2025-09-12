@@ -206,11 +206,17 @@ class Table:
                 if field in record:
                     index_instance.insert(pk, record[field])
             self.indexes[field] = index_instance
-            logger.debug(
-                f"[INDEX] Created {index_type} index on field '{field}' for table '{self.table_name}'."
+            bind = logger.bind(
+                table=self.table_name, op="INDEX", field=field, index_type=index_type
+            )
+            bind.debug("[INDEX] Created {index_type} index on field '{table}'.")
+            bind.info(
+                "Index created on field '{field}' (type={index_type}) for table '{table}'."
             )
         except Exception as e:
-            logger.error(f"[INDEX] Failed to create index on field '{field}': {e}")
+            logger.bind(
+                table=self.table_name, op="INDEX", field=field, index_type=index_type
+            ).error(f"[INDEX] Failed to create index on field '{field}': {e}")
 
     def _update_indexes_on_insert(self, record: Record) -> None:
         """
@@ -298,7 +304,7 @@ class Table:
         :raises DuplicateKeyError: If a record with the same primary key exists.
         :raises SchemaValidationError: If the record fails schema validation.
         """
-        logger.debug(
+        logger.bind(table=self.table_name, op="INSERT").debug(
             f"[INSERT] Attempting to insert record into '{self.table_name}': {record}"
         )
         if self.primary_key not in record:
@@ -314,6 +320,9 @@ class Table:
             self.validate_record(record)
         self.records[record[self.primary_key]] = record
         self._update_indexes_on_insert(record)
+        logger.bind(
+            table=self.table_name, op="INSERT", pk=record[self.primary_key]
+        ).info("Record inserted into '{table}' (pk={pk}).")
 
     def select(
         self, columns: Optional[List[str]] = None, where: Optional[Condition] = None
@@ -327,7 +336,7 @@ class Table:
         :param where: A Condition used to filter records.
         :return: A list of matching records.
         """
-        logger.debug(
+        logger.bind(table=self.table_name, op="SELECT").debug(
             f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}"
         )
         results: List[Record] = []
@@ -361,7 +370,7 @@ class Table:
         :raises Exception: If validation fails, all changes are rolled back.
         :return: The number of records updated.
         """
-        logger.debug(
+        logger.bind(table=self.table_name, op="UPDATE").debug(
             f"[UPDATE] Attempting update in '{self.table_name}' with changes={changes}, where={where}"
         )
         updated_keys: List[Any] = []
@@ -387,6 +396,9 @@ class Table:
 
         for pk in updated_keys:
             self._update_indexes_on_update(pk, backup[pk], self.records[pk])
+        logger.bind(table=self.table_name, op="UPDATE", count=updated_count).info(
+            "Updated {count} record(s) in '{table}'."
+        )
         return updated_count
 
     def delete(self, where: Optional[Condition] = None) -> int:
@@ -397,7 +409,7 @@ class Table:
         :raises RecordNotFoundError: If no records match the criteria.
         :return: The number of records deleted.
         """
-        logger.debug(
+        logger.bind(table=self.table_name, op="DELETE").debug(
             f"[DELETE] Attempting delete in '{self.table_name}' with where={where}"
         )
         keys_to_delete = [
@@ -413,7 +425,11 @@ class Table:
             record = self.records[key]
             self._update_indexes_on_delete(record)
             del self.records[key]
-        return len(keys_to_delete)
+        deleted_count = len(keys_to_delete)
+        logger.bind(table=self.table_name, op="DELETE", count=deleted_count).info(
+            "Deleted {count} record(s) from '{table}'."
+        )
+        return deleted_count
 
     def copy(self) -> Dict[Any, Record]:
         """

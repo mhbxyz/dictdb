@@ -2,7 +2,7 @@ import asyncio
 import json
 import pickle
 from pathlib import Path
-from typing import Dict, List, Union, cast, Any
+from typing import Dict, List, Union, Any
 
 from .table import Table
 from .logging import logger
@@ -23,7 +23,7 @@ class DictDB:
         :rtype: None
         """
         self.tables: Dict[str, Table] = {}
-        logger.info("Initialized an empty DictDB instance.")
+        logger.bind(component="DictDB").info("Initialized an empty DictDB instance.")
 
     def create_table(self, table_name: str, primary_key: str = "id") -> None:
         """
@@ -43,6 +43,9 @@ class DictDB:
         if table_name in self.tables:
             raise ValueError(f"Table '{table_name}' already exists.")
         self.tables[table_name] = Table(table_name, primary_key)
+        logger.bind(
+            component="DictDB", op="CREATE_TABLE", table=table_name, pk=primary_key
+        ).info("Created table '{table}' (pk='{pk}').")
 
     def drop_table(self, table_name: str) -> None:
         """
@@ -58,6 +61,9 @@ class DictDB:
         if table_name not in self.tables:
             raise ValueError(f"Table '{table_name}' does not exist.")
         del self.tables[table_name]
+        logger.bind(component="DictDB", op="DROP_TABLE", table=table_name).info(
+            "Dropped table '{table}'."
+        )
 
     def get_table(self, table_name: str) -> Table:
         """
@@ -103,6 +109,19 @@ class DictDB:
             filename = str(filename)
 
         file_format = file_format.lower()
+        # Compute simple stats for observability
+        table_count = len(self.tables)
+        record_count = sum(t.size() for t in self.tables.values())
+        logger.bind(
+            component="DictDB",
+            op="SAVE",
+            tables=table_count,
+            records=record_count,
+            format=file_format,
+            path=filename,
+        ).info(
+            "Saving database to {path} (format={format}, tables={tables}, records={records})."
+        )
         match file_format:
             case "json":
                 state: Dict[str, Any] = {"tables": {}}
@@ -139,6 +158,9 @@ class DictDB:
                 raise ValueError(
                     "Unsupported file_format. Please use 'json' or 'pickle'."
                 )
+        logger.bind(component="DictDB", op="SAVE", path=filename).info(
+            "Save completed: {path}"
+        )
 
     @classmethod
     def _load_from_json(cls, filename: str) -> "DictDB":
@@ -201,11 +223,36 @@ class DictDB:
         file_format = file_format.lower()
         match file_format:
             case "json":
-                return cls._load_from_json(filename)
+                db = cls._load_from_json(filename)
+                tables = len(db.tables)
+                records = sum(t.size() for t in db.tables.values())
+                logger.bind(
+                    component="DictDB",
+                    op="LOAD",
+                    path=filename,
+                    format=file_format,
+                    tables=tables,
+                    records=records,
+                ).info(
+                    "Loaded database from {path} (format={format}, tables={tables}, records={records})."
+                )
+                return db
             case "pickle":
                 with open(filename, "rb") as f:
-                    db = pickle.load(f)
-                return cast(DictDB, db)
+                    loaded_db: DictDB = pickle.load(f)
+                tables = len(loaded_db.tables)
+                records = sum(t.size() for t in loaded_db.tables.values())
+                logger.bind(
+                    component="DictDB",
+                    op="LOAD",
+                    path=filename,
+                    format=file_format,
+                    tables=tables,
+                    records=records,
+                ).info(
+                    "Loaded database from {path} (format={format}, tables={tables}, records={records})."
+                )
+                return loaded_db
             case _:
                 raise ValueError(
                     "Unsupported file_format. Please use 'json' or 'pickle'."

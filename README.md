@@ -16,19 +16,42 @@ DictDB is an in‑memory, dictionary-based database for Python with SQL‑like C
 ## Quickstart
 
 ```python
-from dictdb import DictDB, Query, configure_logging
+from dictdb import DictDB, Condition, configure_logging
 
-configure_logging(level="DEBUG", console=True)
+# Configure human-friendly console logs (see docs/logging.md for JSON logs)
+configure_logging(level="INFO", console=True)
 
+# 1) Create DB and a table
 db = DictDB()
 db.create_table("employees", primary_key="emp_id")
 employees = db.get_table("employees")
 
-employees.insert({"emp_id": 101, "name": "Alice", "department": "IT"})
-employees.insert({"name": "Charlie", "department": "IT"})
+# 2) Insert data (auto-assigns emp_id if missing)
+employees.insert({"emp_id": 101, "name": "Alice", "department": "IT", "age": 30})
+employees.insert({"name": "Bob", "department": "HR", "age": 26})
+employees.insert({"name": "Charlie", "department": "IT", "age": 35})
 
-it_staff = employees.select(where=Query(employees.department == "IT"))
-print(it_staff)
+# 3) Optional: add an index to accelerate equality lookups
+employees.create_index("department", index_type="hash")
+
+# 4) Query: IT employees, projecting only their names
+it_people = employees.select(columns=["name"], where=Condition(employees.department == "IT"))
+print("IT:", it_people)  # [{'name': 'Alice'}, {'name': 'Charlie'}]
+
+# 5) Update: move Bob to IT
+employees.update({"department": "IT"}, where=Condition(employees.name == "Bob"))
+
+# 6) Delete: remove junior employees under 28
+employees.delete(where=Condition(employees.age < 28))
+
+# 7) Introspection helpers
+print("Columns:", employees.columns())
+print("Count:", employees.count(), "Indexed:", employees.indexed_fields())
+
+# 8) Persist and load
+db.save("employees.json", file_format="json")
+db2 = DictDB.load("employees.json", file_format="json")
+print("Loaded tables:", db2.list_tables())
 ```
 
 ## Docs

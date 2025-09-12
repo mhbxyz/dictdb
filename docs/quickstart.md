@@ -1,7 +1,7 @@
 # Quickstart
 
 ```python
-from dictdb import DictDB, Query, configure_logging
+from dictdb import DictDB, Condition, configure_logging
 
 # Optional logging
 configure_logging(level="DEBUG", console=True)
@@ -17,7 +17,7 @@ employees.insert({"emp_id": 102, "name": "Bob", "department": "HR"})
 employees.insert({"name": "Charlie", "department": "IT"})  # auto-assigns emp_id
 
 # Query data
-it_staff = employees.select(where=Query(employees.department == "IT"))
+it_staff = employees.select(where=Condition(employees.department == "IT"))
 print("IT Department Staff:", it_staff)
 ```
 
@@ -48,10 +48,9 @@ products.insert({"product_id": 1001, "name": "Laptop", "price": 999.99})
 ### Selecting / Updating / Deleting
 
 ```python
-from dictdb import Query
+from dictdb import Condition
 
 all_users = users.select()
-rows_updated = users.update({"age": 26}, where=Query(users.name == "Bob"))
-deleted = users.delete(where=Query(users.name == "Alice"))
+rows_updated = users.update({"age": 26}, where=Condition(users.name == "Bob"))
+deleted = users.delete(where=Condition(users.name == "Alice"))
 ```
-
