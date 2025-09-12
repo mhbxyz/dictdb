@@ -1,6 +1,41 @@
 # CHANGELOG
 
 
+## v1.6.0 (2025-09-12)
+
+### Documentation
+
+- **roadmap**: Reorder and renumber Improvements; remove implemented items
+  ([`dfccd2e`](https://github.com/mhbxyz/dictdb/commit/dfccd2ea92de687bf1a4249f0477f2effffa63c5))
+
+- Rename “Prioritized Improvements” to “Improvements” - Remove already implemented features -
+  Reorder by priority and renumber 1–12: 1. Concurrency & Thread Safety 2. Transactions & Batching
+  3. Robust, Atomic Persistence 4. On‑Disk Mode & Per‑Query Durability 5. Indexing & Simple Planner
+  6. Performance & Memory 7. Schema & Validation 8. Primary Key Strategies 9. Backup Manager
+  Enhancements 10. CLI 11. Advanced Query Capabilities 12. Developer Tooling & Scripts
+
+### Features
+
+- **core**: Add table-scoped RW locks and consistent backups (roadmap #1)
+  ([`b0bc3f0`](https://github.com/mhbxyz/dictdb/commit/b0bc3f032bf35befaa7378556fc2504e5fcbc61e))
+
+- Add src/dictdb/core/rwlock.py: writer-preference reader–writer lock with docstrings and context
+  managers - Guard Table operations with locks: - Write-locked: insert(), update(), delete(),
+  create_index() - Read-locked: select() (filtering under lock; ordering/projection outside), all(),
+  copy(), columns() (data-derived), count()/size(), indexed_fields(), has_index() - Restore runtime
+  lock on unpickling in Table.__setstate__ - Make persist.save() iterate over a snapshot of
+  db.tables to avoid races; rely on Table.all() read-lock for per-table consistency - Document lock
+  design, invariants, and usage in rwlock.py
+
+### Testing
+
+- **core**: Add unit tests for RWLock behavior
+  ([`ea382d6`](https://github.com/mhbxyz/dictdb/commit/ea382d615b5b9d611e0c3f4f9b532efc103bf272))
+
+- Readers share access; writer excludes readers; writer preference blocks new readers; writers are
+  serialized
+
+
 ## v1.5.0 (2025-09-12)
 
 ### Chores
