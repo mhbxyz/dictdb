@@ -55,6 +55,33 @@ This roadmap focuses on concrete improvements and extensions derived from the cu
 - Acceptance: reduced peak memory during save; no API changes.
 
 
+12) Developer Tooling & Scripts
+- Dev productivity:
+  - `scripts/run_all.py` One-shot ruff format && ruff check && mypy && pytest runner with nice summary and non-zero on failure,
+  - `scripts/typecov.py` Combine MyPy + Coverage summary, failing if coverage or types fall below thresholds,
+  - `scripts/changed_tests.py` Run only tests affected by recent git changes (maps changed paths to tests),
+  - `scripts/repl.py` Small interactive REPL to create tables, insert/select, and inspect indexes for manual poking.
+- Performance/load:
+  - `scripts/bench_matrix.py` Run the benchmark across matrix of rows/iterations/seeds and write a JSON/CSV table,
+  - `scripts/profile_select.py` cProfile/py-spy wrappers for hot queries; emits stats and optional flamegraph,
+  - `scripts/memory_probe.py` Measure memory footprint across dataset sizes and operations (insert/select/save).
+- QA/robustness:
+  - `scripts/persist_stress.py` Repeated save/load cycles with randomized data and formats; checks integrity, timings,
+  - `scripts/corrupt_fuzzer.py` Mutate saved JSON/pickle files (truncate/flip bytes) to ensure loader errors correctly,
+  - `scripts/concurrency_stress.py`  Threaded writers + readers to shake out races; tunable threads/ops/duration,
+  - `scripts/backup_sandbox.py` Exercise BackupManager with short intervals, induced failures, and retention policy simulation.
+- Data/schema:
+  - `scripts/gen_data.py` Generate realistic fixture datasets (users/products) to JSON/NDJSON; parameterized sizes and skew,
+  - `scripts/schema_audit.py` Validate table schemas against sample data files; reports mismatches and stats.
+- Docs/release:
+  - `scripts/docs_check_links.py` Validate intra-repo doc links after restructures; prints broken links with suggestions,
+  - `scripts/release_notes.py` Generate draft release notes from Conventional Commits since last tag; groups by type.
+- CI/utility:
+  - `scripts/ci_local.py` Mirror CI steps locally with the same commands/env; optional step selection,
+  - `scripts/coverage_diff.py` Show coverage deltas compared to main (via last CI artifact or local baseline).
+- Acceptance: each script has argparse `--help`, sensible exit codes, minimal logging by default, is cross‑platform, gets a Makefile target (when appropriate), and a short entry in docs.
+
+
 ## Nice‑To‑Haves
 - Generated API docs (pdoc/Sphinx) with examples and tutorial notebooks.
 - Export/import connectors (CSV, NDJSON) and a simple HTTP server for remote access.
