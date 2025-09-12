@@ -70,3 +70,17 @@ def test_stop_backup_manager(tmp_path: Path, test_db: DictDB) -> None:
     manager.stop()
     # Ensure the backup thread has stopped.
     assert not manager._backup_thread.is_alive(), "Backup manager thread did not stop."
+
+
+def test_backup_now_handles_failure(tmp_path: Path, log_capture) -> None:  # type: ignore[no-redef]
+    class FailingDB:
+        def save(self, filename: str, file_format: str) -> None:  # type: ignore[no-untyped-def]
+            raise RuntimeError("boom")
+
+    # Configure a capture sink via log_capture fixture
+    backup_dir = tmp_path / "fail_backup"
+    manager = BackupManager(FailingDB(), backup_dir, backup_interval=60, file_format="json")
+    # Should not raise, and should log the error
+    manager.backup_now()
+    messages = "\n".join(log_capture)
+    assert "Backup failed:" in messages
