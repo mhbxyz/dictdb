@@ -1,5 +1,5 @@
 import operator
-from typing import Any, Optional, Dict, List, Callable, cast
+from typing import Any, Optional, Dict, List, Callable, cast, Iterable, Tuple, Union
 
 from .exceptions import SchemaValidationError, DuplicateKeyError, RecordNotFoundError
 from .condition import PredicateExpr, Condition
@@ -118,6 +118,54 @@ class Field:
         :return: A Condition instance.
         """
         return PredicateExpr(_FieldCondition(self.name, other, operator.ge))
+
+    def is_in(self, values: Iterable[Any]) -> PredicateExpr:
+        """
+        Creates a Condition checking membership of the field's value in the given iterable.
+
+        :param values: Iterable of acceptable values.
+        :return: A Condition instance.
+        """
+        vals = set(values)
+        return PredicateExpr(lambda rec: rec.get(self.name) in vals)
+
+    def contains(self, item: Any) -> PredicateExpr:
+        """
+        Creates a Condition checking whether the field's value contains the given item.
+
+        - For strings: checks substring membership.
+        - For containers (lists, sets, dicts, etc.): uses membership (in).
+        :param item: The item or substring to check for.
+        """
+
+        def _pred(rec: Dict[str, Any]) -> bool:
+            val = rec.get(self.name)
+            if val is None:
+                return False
+            try:
+                return item in val
+            except Exception:
+                return False
+
+        return PredicateExpr(_pred)
+
+    def startswith(self, prefix: str) -> PredicateExpr:
+        """
+        Creates a Condition checking whether the field's string value starts with prefix.
+        """
+        return PredicateExpr(
+            lambda rec: isinstance(rec.get(self.name), str)
+            and cast(str, rec.get(self.name)).startswith(prefix)
+        )
+
+    def endswith(self, suffix: str) -> PredicateExpr:
+        """
+        Creates a Condition checking whether the field's string value ends with suffix.
+        """
+        return PredicateExpr(
+            lambda rec: isinstance(rec.get(self.name), str)
+            and cast(str, rec.get(self.name)).endswith(suffix)
+        )
 
 
 class Table:
@@ -265,9 +313,10 @@ class Table:
         :param where: The Condition wrapper.
         :return: True if the condition is a simple equality on an indexed field.
         """
-        func = cast(_FieldCondition, where.condition.func)
-        if func.op == operator.eq and func.field in self.indexes:
-            return True
+        func = where.condition.func
+        if isinstance(func, _FieldCondition):
+            if func.op == operator.eq and func.field in self.indexes:
+                return True
         return False
 
     def validate_record(self, record: Record) -> None:
@@ -325,15 +374,29 @@ class Table:
         ).info("Record inserted into '{table}' (pk={pk}).")
 
     def select(
-        self, columns: Optional[List[str]] = None, where: Optional[Condition] = None
+        self,
+        columns: Optional[
+            Union[List[str], Dict[str, str], List[Tuple[str, str]]]
+        ] = None,
+        where: Optional[Condition] = None,
+        *,
+        order_by: Optional[Union[str, List[str], Tuple[str, ...]]] = None,
+        limit: Optional[int] = None,
+        offset: int = 0,
     ) -> List[Record]:
         """
         Retrieves records matching an optional condition.
 
         If the condition is a simple equality on an indexed field, the index is used.
 
-        :param columns: List of fields to include in each returned record. If None, returns full records.
+        :param columns: Projection of fields to include. Can be:
+                        - list of field names (str)
+                        - dict of alias -> field name
+                        - list of (alias, field) tuples
         :param where: A Condition used to filter records.
+        :param order_by: Field name or list of field names to sort by. Prefix with '-' for descending.
+        :param limit: Maximum number of records to return after offset.
+        :param offset: Number of records to skip from the start.
         :return: A list of matching records.
         """
         logger.bind(table=self.table_name, op="SELECT").debug(
@@ -349,13 +412,48 @@ class Table:
             candidate_records = [self.records[pk] for pk in candidate_pks]
         else:
             candidate_records = list(self.records.values())
+        # Filter
+        filtered_records: List[Record] = []
         for record in candidate_records:
             if where is None or where(record):
-                if columns:
-                    filtered = {col: record.get(col) for col in columns}
-                    results.append(filtered)
-                else:
-                    results.append(record)
+                filtered_records.append(record)
+
+        # Order
+        if order_by:
+            fields = [order_by] if isinstance(order_by, str) else list(order_by)
+
+            def _make_key(field_name: str) -> Callable[[Record], Any]:
+                def _key_fn(r: Record) -> Any:
+                    return r.get(field_name)
+
+                return _key_fn
+
+            for field in reversed(fields):
+                desc = False
+                fname = field
+                if field.startswith("-"):
+                    desc = True
+                    fname = field[1:]
+                filtered_records.sort(key=_make_key(fname), reverse=desc)
+
+        # Paginate
+        start = max(offset, 0)
+        end = start + limit if isinstance(limit, int) and limit >= 0 else None
+        sliced_records = filtered_records[start:end]
+
+        # Project
+        def project(rec: Record) -> Record:
+            if columns is None:
+                return rec
+            if isinstance(columns, dict):
+                return {alias: rec.get(field) for alias, field in columns.items()}
+            if columns and isinstance(columns[0], tuple):
+                pairs = cast(List[Tuple[str, str]], columns)
+                return {alias: rec.get(field) for (alias, field) in pairs}
+            names = cast(List[str], columns)
+            return {col: rec.get(col) for col in names}
+
+        results = [project(record) for record in sliced_records]
         return results
 
     def update(self, changes: Record, where: Optional[Condition] = None) -> int:
