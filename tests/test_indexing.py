@@ -8,7 +8,7 @@ from typing import Dict, Any
 
 import pytest
 
-from dictdb import Table, Query
+from dictdb import Table, Condition
 
 
 def test_index_creation(indexed_table: Table) -> None:
@@ -50,7 +50,7 @@ def test_update_updates_index(indexed_table: Table) -> None:
     """
     # Update Bob's age from 25 to 30.
     updated = indexed_table.update(
-        {"age": 30}, where=Query(indexed_table.name == "Bob")
+        {"age": 30}, where=Condition(indexed_table.name == "Bob")
     )
     assert updated == 1
     index = indexed_table.indexes["age"]
@@ -70,7 +70,7 @@ def test_delete_updates_index(indexed_table: Table) -> None:
     Tests that deleting a record removes its key from the index.
     """
     # Delete record for Alice (age 30).
-    deleted = indexed_table.delete(where=Query(indexed_table.name == "Alice"))
+    deleted = indexed_table.delete(where=Condition(indexed_table.name == "Alice"))
     assert deleted == 1
     index = indexed_table.indexes["age"]
     if hasattr(index, "index"):
@@ -85,7 +85,7 @@ def test_select_uses_index(indexed_table: Table) -> None:
     """
     Tests that a simple equality select on an indexed field returns the correct results.
     """
-    condition = Query(indexed_table.age == 30)
+    condition = Condition(indexed_table.age == 30)
     results = indexed_table.select(where=condition)
     names = {record["name"] for record in results}
     # Expected names from original records with age 30.
@@ -100,7 +100,7 @@ def test_index_creation_failure_fallback(monkeypatch: pytest.MonkeyPatch) -> Non
     After attempting to create an index on 'age', the table should not include the index,
     and queries using the condition on 'age' must still return the correct results.
     """
-    from dictdb import Table, Query
+    from dictdb import Table, Condition
     from dictdb.index import HashIndex
 
     # Create a new table with schema and two records.
@@ -130,6 +130,6 @@ def test_index_creation_failure_fallback(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(HashIndex, "insert", original_insert)
 
     # Test that select still returns the correct result using a full scan.
-    condition = Query(table.age == 30)
+    condition = Condition(table.age == 30)
     results = table.select(where=condition)
     assert len(results) == 1 and results[0]["name"] == "Alice"

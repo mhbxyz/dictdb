@@ -6,8 +6,7 @@ Tests are conducted for both JSON and pickle formats.
 """
 
 from pathlib import Path
-
-import pytest
+import asyncio
 
 from dictdb import DictDB
 
@@ -69,8 +68,7 @@ def test_save_load_pickle(tmp_path: Path) -> None:
     assert records[0]["age"] == 25
 
 
-@pytest.mark.asyncio
-async def test_async_save_load_json(tmp_path: Path) -> None:
+def test_async_save_load_json(tmp_path: Path) -> None:
     """
     Tests asynchronously saving and loading the DictDB using JSON format.
 
@@ -85,9 +83,9 @@ async def test_async_save_load_json(tmp_path: Path) -> None:
     table.insert({"id": 1, "name": "Alice", "age": 30})
 
     file_json = tmp_path / "async_db.json"
-    await db.async_save(str(file_json), "json")
+    asyncio.run(db.async_save(str(file_json), "json"))
 
-    loaded_db = await DictDB.async_load(str(file_json), "json")
+    loaded_db = asyncio.run(DictDB.async_load(str(file_json), "json"))
     loaded_table = loaded_db.get_table("test_async")
     records = loaded_table.select()
 
@@ -96,8 +94,7 @@ async def test_async_save_load_json(tmp_path: Path) -> None:
     assert records[0]["age"] == 30
 
 
-@pytest.mark.asyncio
-async def test_async_save_load_pickle(tmp_path: Path) -> None:
+def test_async_save_load_pickle(tmp_path: Path) -> None:
     """
     Tests asynchronously saving and loading the DictDB using pickle format.
 
@@ -112,9 +109,9 @@ async def test_async_save_load_pickle(tmp_path: Path) -> None:
     table.insert({"id": 1, "name": "Bob", "age": 25})
 
     file_pickle = tmp_path / "async_db.pkl"
-    await db.async_save(str(file_pickle), "pickle")
+    asyncio.run(db.async_save(str(file_pickle), "pickle"))
 
-    loaded_db = await DictDB.async_load(str(file_pickle), "pickle")
+    loaded_db = asyncio.run(DictDB.async_load(str(file_pickle), "pickle"))
     loaded_table = loaded_db.get_table("sample_async")
     records = loaded_table.select()
 

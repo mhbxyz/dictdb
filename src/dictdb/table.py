@@ -2,7 +2,7 @@ import operator
 from typing import Any, Optional, Dict, List, Callable, cast
 
 from .exceptions import SchemaValidationError, DuplicateKeyError, RecordNotFoundError
-from .condition import Condition, Query
+from .condition import PredicateExpr, Condition
 from .index import IndexBase, HashIndex, SortedIndex
 from .logging import logger
 from .types import Record, Schema
@@ -59,7 +59,7 @@ class Field:
         self.table = table
         self.name = name
 
-    def __eq__(self, other: Any) -> Condition:  # type: ignore[override]
+    def __eq__(self, other: Any) -> PredicateExpr:  # type: ignore[override]
         """
         Creates a Condition checking for equality.
 
@@ -67,9 +67,9 @@ class Field:
         :type other: Any
         :return: A Condition instance.
         """
-        return Condition(_FieldCondition(self.name, other, operator.eq))
+        return PredicateExpr(_FieldCondition(self.name, other, operator.eq))
 
-    def __ne__(self, other: Any) -> Condition:  # type: ignore[override]
+    def __ne__(self, other: Any) -> PredicateExpr:  # type: ignore[override]
         """
         Creates a Condition checking for inequality.
 
@@ -77,9 +77,9 @@ class Field:
         :type other: Any
         :return: A Condition instance.
         """
-        return Condition(_FieldCondition(self.name, other, operator.ne))
+        return PredicateExpr(_FieldCondition(self.name, other, operator.ne))
 
-    def __lt__(self, other: Any) -> Condition:
+    def __lt__(self, other: Any) -> PredicateExpr:
         """
         Creates a Condition checking for less-than.
 
@@ -87,9 +87,9 @@ class Field:
         :type other: Any
         :return: A Condition instance.
         """
-        return Condition(_FieldCondition(self.name, other, operator.lt))
+        return PredicateExpr(_FieldCondition(self.name, other, operator.lt))
 
-    def __le__(self, other: Any) -> Condition:
+    def __le__(self, other: Any) -> PredicateExpr:
         """
         Creates a Condition checking for less-than-or-equal.
 
@@ -97,9 +97,9 @@ class Field:
         :type other: Any
         :return: A Condition instance.
         """
-        return Condition(_FieldCondition(self.name, other, operator.le))
+        return PredicateExpr(_FieldCondition(self.name, other, operator.le))
 
-    def __gt__(self, other: Any) -> Condition:
+    def __gt__(self, other: Any) -> PredicateExpr:
         """
         Creates a Condition checking for greater-than.
 
@@ -107,9 +107,9 @@ class Field:
         :type other: Any
         :return: A Condition instance.
         """
-        return Condition(_FieldCondition(self.name, other, operator.gt))
+        return PredicateExpr(_FieldCondition(self.name, other, operator.gt))
 
-    def __ge__(self, other: Any) -> Condition:
+    def __ge__(self, other: Any) -> PredicateExpr:
         """
         Creates a Condition checking for greater-than-or-equal.
 
@@ -117,7 +117,7 @@ class Field:
         :type other: Any
         :return: A Condition instance.
         """
-        return Condition(_FieldCondition(self.name, other, operator.ge))
+        return PredicateExpr(_FieldCondition(self.name, other, operator.ge))
 
 
 class Table:
@@ -251,12 +251,12 @@ class Table:
             if field in record:
                 index.delete(pk, record[field])
 
-    def _is_indexed_eq_condition(self, where: Query) -> bool:
+    def _is_indexed_eq_condition(self, where: Condition) -> bool:
         """
-        Determines if the provided Query represents a simple equality condition
+        Determines if the provided Condition represents a simple equality condition
         on an indexed field.
 
-        :param where: The Query condition.
+        :param where: The Condition wrapper.
         :return: True if the condition is a simple equality on an indexed field.
         """
         func = cast(_FieldCondition, where.condition.func)
@@ -316,7 +316,7 @@ class Table:
         self._update_indexes_on_insert(record)
 
     def select(
-        self, columns: Optional[List[str]] = None, where: Optional[Query] = None
+        self, columns: Optional[List[str]] = None, where: Optional[Condition] = None
     ) -> List[Record]:
         """
         Retrieves records matching an optional condition.
@@ -324,7 +324,7 @@ class Table:
         If the condition is a simple equality on an indexed field, the index is used.
 
         :param columns: List of fields to include in each returned record. If None, returns full records.
-        :param where: A Query used to filter records.
+        :param where: A Condition used to filter records.
         :return: A list of matching records.
         """
         logger.debug(
@@ -349,14 +349,14 @@ class Table:
                     results.append(record)
         return results
 
-    def update(self, changes: Record, where: Optional[Query] = None) -> int:
+    def update(self, changes: Record, where: Optional[Condition] = None) -> int:
         """
         Updates records that satisfy the given condition. The operation is atomic:
         if any record fails validation, all changes are rolled back.
         Indexes are updated automatically.
 
         :param changes: Dictionary of field-value pairs to update.
-        :param where: A Query that determines which records to update.
+        :param where: A Condition that determines which records to update.
         :raises RecordNotFoundError: If no records match the criteria.
         :raises Exception: If validation fails, all changes are rolled back.
         :return: The number of records updated.
@@ -389,11 +389,11 @@ class Table:
             self._update_indexes_on_update(pk, backup[pk], self.records[pk])
         return updated_count
 
-    def delete(self, where: Optional[Query] = None) -> int:
+    def delete(self, where: Optional[Condition] = None) -> int:
         """
         Deletes records matching the given condition. Indexes are updated automatically.
 
-        :param where: A Query that determines which records to delete.
+        :param where: A Condition that determines which records to delete.
         :raises RecordNotFoundError: If no records match the criteria.
         :return: The number of records deleted.
         """

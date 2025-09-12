@@ -1,5 +1,5 @@
 from .backup import BackupManager
-from .condition import Query
+from .condition import Condition
 from .table import Table
 from .database import DictDB
 from .exceptions import DuplicateKeyError, RecordNotFoundError, SchemaValidationError
@@ -8,7 +8,7 @@ from .logging import logger, configure_logging
 __all__ = [
     "DictDB",
     "Table",
-    "Query",
+    "Condition",
     "DuplicateKeyError",
     "RecordNotFoundError",
     "SchemaValidationError",
