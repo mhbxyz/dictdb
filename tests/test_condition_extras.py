@@ -6,12 +6,12 @@ from dictdb import Table, Condition
 def test_predicate_expr_bool_raises(table: Table) -> None:
     pred = table.name == "Alice"
     with pytest.raises(TypeError):
-        bool(pred)  # type: ignore[truthy-bool]
+        bool(pred)
 
 
 def test_condition_invalid_init_type() -> None:
     with pytest.raises(TypeError):
-        Condition("not a predicate")  # type: ignore[arg-type]
+        Condition("not a predicate")
 
 
 def test_condition_boolean_ops_methods(table: Table) -> None:
@@ -29,4 +29,3 @@ def test_condition_boolean_ops_methods(table: Table) -> None:
     c_not = ~c2
     assert c_not({"name": "Bob"}) is True
     assert c_not({"name": "Alice"}) is False
-

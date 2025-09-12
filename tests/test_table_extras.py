@@ -1,8 +1,10 @@
+from typing import Any
+
 from dictdb import Table, Condition
 
 
 def test_schema_primary_key_added() -> None:
-    schema = {"name": str}
+    schema: dict[str, type[Any]] = {"name": str}
     t = Table("t", primary_key="id", schema=schema)
     assert t.schema is not None and "id" in t.schema and t.schema["id"] is int
 
@@ -32,4 +34,3 @@ def test_validate_record_no_schema_return() -> None:
     t = Table("t")
     # Should be a no-op and not raise
     t.validate_record({"id": 1, "x": 1})
-

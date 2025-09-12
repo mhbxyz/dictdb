@@ -7,4 +7,3 @@ def test_hash_index_delete_removes_empty_bucket() -> None:
     assert "x" in idx.index
     idx.delete(1, "x")
     assert "x" not in idx.index
-

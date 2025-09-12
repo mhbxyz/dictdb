@@ -12,4 +12,3 @@ def test_contains_with_non_iterable() -> None:
     cond = Condition(table.tags.contains("x"))
     # 'in' on int raises TypeError internally; predicate should return False
     assert cond({"tags": 123}) is False
-

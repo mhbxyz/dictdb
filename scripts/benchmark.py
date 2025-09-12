@@ -127,11 +127,17 @@ def run_benchmarks(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Benchmark DictDB select performance")
     parser.add_argument("--rows", type=int, default=10000, help="Number of records")
-    parser.add_argument("--iterations", type=int, default=10, help="Iterations per case")
+    parser.add_argument(
+        "--iterations", type=int, default=10, help="Iterations per case"
+    )
     parser.add_argument("--age", type=int, default=30, help="Age value to query")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for data")
-    parser.add_argument("--profile", action="store_true", help="Profile the run with cProfile")
-    parser.add_argument("--json-out", type=str, default=None, help="Write results to JSON file")
+    parser.add_argument(
+        "--profile", action="store_true", help="Profile the run with cProfile"
+    )
+    parser.add_argument(
+        "--json-out", type=str, default=None, help="Write results to JSON file"
+    )
     args = parser.parse_args()
 
     # Reduce logging overhead to not skew results
@@ -145,8 +151,14 @@ if __name__ == "__main__":
         print(
             f"\nRows={args.rows}, iterations={args.iterations}, query_age={args.age}, seed={args.seed}"
         )
-        print("Average query time without index: {:.6f} s".format(results["without_index"]))
-        print("Average query time with hash index: {:.6f} s".format(results["hash_index"]))
+        print(
+            "Average query time without index: {:.6f} s".format(
+                results["without_index"]
+            )
+        )
+        print(
+            "Average query time with hash index: {:.6f} s".format(results["hash_index"])
+        )
         print(
             "Average query time with sorted index: {:.6f} s".format(
                 results["sorted_index"]

@@ -13,4 +13,8 @@ def test_save_json_includes_schema_types(tmp_path: Path) -> None:
     p = tmp_path / "db.json"
     db.save(p, "json")
     data = json.loads(p.read_text())
-    assert data["tables"]["people"]["schema"] == {"id": "int", "name": "str", "age": "int"}
+    assert data["tables"]["people"]["schema"] == {
+        "id": "int",
+        "name": "str",
+        "age": "int",
+    }

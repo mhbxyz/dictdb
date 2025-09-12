@@ -35,4 +35,3 @@ def test_persist_load_unsupported_schema_type(tmp_path: Path) -> None:
     p.write_text(json.dumps(content))
     with pytest.raises(ValueError):
         persist.load(p, "json")
-

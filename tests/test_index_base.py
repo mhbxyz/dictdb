@@ -1,19 +1,20 @@
 import pytest
+from typing import Any, Set
 
 from dictdb.index.base import IndexBase
 
 
 class DummyIndex(IndexBase):
-    def insert(self, pk, value):  # type: ignore[no-untyped-def]
+    def insert(self, pk: Any, value: Any) -> None:
         return IndexBase.insert(self, pk, value)
 
-    def update(self, pk, old_value, new_value):  # type: ignore[no-untyped-def]
+    def update(self, pk: Any, old_value: Any, new_value: Any) -> None:
         return IndexBase.update(self, pk, old_value, new_value)
 
-    def delete(self, pk, value):  # type: ignore[no-untyped-def]
+    def delete(self, pk: Any, value: Any) -> None:
         return IndexBase.delete(self, pk, value)
 
-    def search(self, value):  # type: ignore[no-untyped-def]
+    def search(self, value: Any) -> Set[Any]:
         return IndexBase.search(self, value)
 
 
@@ -27,4 +28,3 @@ def test_index_base_not_implemented() -> None:
         idx.delete(1, "v")
     with pytest.raises(NotImplementedError):
         idx.search("v")
-
