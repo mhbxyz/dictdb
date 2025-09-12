@@ -1,6 +1,132 @@
 # CHANGELOG
 
 
+## v1.5.0 (2025-09-12)
+
+### Chores
+
+- **bench**: Modernize benchmark with CLI, profiling, JSON output; add docs and Make targets
+  ([`99d8236`](https://github.com/mhbxyz/dictdb/commit/99d8236899a2dcbd128fe1614469096d0462d599))
+
+- Replace deprecated/non-existent Query with Condition in benchmark queries - Add CLI flags: --rows,
+  --iterations, --age, --seed, --profile, --json-out - Seeded data generation for deterministic,
+  fair comparisons across runs - Minimize logging overhead during benchmarks via
+  configure_logging(level="WARNING", console=False) - Return structured results from
+  run_benchmarks() (TypedDict) for programmatic use - Makefile: keep benchmark target; add bench
+  with tunables and optional JSON/profiling - Add docs/benchmark.md with usage, flags, and Make
+  examples - Update README with a concise “Benchmarks” section linking to docs
+
+Usage examples:
+
+- python scripts/benchmark.py --rows 20000 --iterations 20 --age 30 --seed 123 - python
+  scripts/benchmark.py --profile --json-out results.json - make bench ROWS=20000 ITERATIONS=20
+  AGE=30 SEED=123 - make bench OUT=results.json - make bench PROFILE=1
+
+No breaking changes.
+
+- **tests, types**: Fix MyPy strict issues and clean up typings
+  ([`9fdb72a`](https://github.com/mhbxyz/dictdb/commit/9fdb72a34dbc177ae45d71661d02aacea8e767be))
+
+- Annotate DummyIndex methods in tests/test_index_base.py to avoid untyped calls - Use dict[str,
+  type[Any]] for schema in tests/test_table_extras.py - Remove unused type: ignore comments in
+  tests/test_condition_extras.py - Make failing backup mock subclass DictDB and annotate fixtures in
+  tests/test_backup.py - Apply Ruff formatting on touched files
+
+All checks green: ruff, mypy --strict, pytest (82 passed)
+
+### Documentation
+
+- Restructure docs and enhance README badges
+  ([`fe3cceb`](https://github.com/mhbxyz/dictdb/commit/fe3cceb62e7943858156746c1434b783e306b27d))
+
+- Restructure docs into clear sections: - docs/getting-started/: overview.md, installation.md,
+  quickstart.md - docs/guides/: queries.md, schema.md, indexing.md, logging.md, benchmark.md -
+  docs/reference/: api.md - docs/contributing/: development.md, publishing.md - Added section
+  indexes (docs/*/README.md) and top-level docs/README.md - Update internal links across README and
+  docs to new structure - README “Docs” now points to section indexes - README logging link ->
+  docs/guides/logging.md - README benchmark link -> docs/guides/benchmark.md - Contributing dev
+  guide now points to docs/contributing/publishing.md - Remove implemented roadmap item: - Deleted
+  “4) Query DSL & Results” from docs/roadmap.md - README improvements: - Add badges: Python
+  versions, License, Ruff (code style), MyPy (type checking) - Keep assets path stable; existing
+  logo reference remains valid
+
+No functional code changes; documentation only.
+
+- **roadmap**: Add Developer Tooling & Scripts roadmap item
+  ([`75ce4f9`](https://github.com/mhbxyz/dictdb/commit/75ce4f96bd3ed04634f43710082fc1fc8a4505d2))
+
+- Add item “12) Developer Tooling & Scripts” with proposed utilities - Categories: - Dev
+  productivity: run_all, typecov, changed_tests, repl - Performance/load: bench_matrix,
+  profile_select, memory_probe - QA/robustness: persist_stress, corrupt_fuzzer, concurrency_stress,
+  backup_sandbox - Data/schema: gen_data, schema_audit - Docs/release: docs_check_links,
+  release_notes - CI/utility: ci_local, coverage_diff - Acceptance: argparse help, proper exit
+  codes, minimal logging, cross‑platform, Makefile targets where relevant, short docs entries
+
+- **roadmap**: Add on-disk mode with per-query durability plan
+  ([`9fa7d48`](https://github.com/mhbxyz/dictdb/commit/9fa7d48401768f29454a4023283259a06c04540d))
+
+- Add “On‑Disk Mode & Per‑Query Durability” item - Open DBs directly from a file with durable
+  INSERT/UPDATE/DELETE - Lightweight WAL/journal with crash‑safe recovery and periodic compaction -
+  Configurable sync policy (always/batch/os) and explicit commit() support - Acceptance: durability
+  after ops, correct recovery, bounded file size, benchmarked overhead
+
+### Features
+
+- **query**: Add IN/contains/prefix/suffix, ordering, pagination, and alias projections
+  ([`def5ec2`](https://github.com/mhbxyz/dictdb/commit/def5ec2371c2e5a5d14b67b386bae29b43e2d934))
+
+- Field: add isin(), contains(), startswith(), endswith() for richer conditions - Table.select:
+  support order_by (multi-field, “-” desc), limit/offset, and projections with aliases (list, dict,
+  pair forms) - Index fast-path check hardened to only apply to simple equality on indexed fields -
+  Tests: add tests/test_query_features.py for new operators, ordering, pagination, and projections -
+  All tests pass (59), mypy --strict clean
+
+### Refactoring
+
+- Restructure package
+  ([`8278cb1`](https://github.com/mhbxyz/dictdb/commit/8278cb13633ceb459dac1778c2b0bee2dde9b5ab))
+
+- Move core: table/condition/types → core/; extract field → core/field.py - Add query helpers:
+  query/order.py, query/pager.py, query/projection.py - Storage split: storage/database.py,
+  storage/backup.py; add storage/persist.py for JSON/pickle IO - Observability: move logging →
+  obs/logging.py (+ obs/init.py) - Index: remove legacy index.py; add index/registry.py (factory);
+  keep base/hash/sorted in index/ - Update public API: re-export DictDB, Table, Condition,
+  BackupManager, logger from new locations in init.py - Wire Table.select to query helpers; use
+  index registry for create_index - Maintain top-level API stability; internal imports updated
+
+Testing
+
+- 59 passed (pytest) with XDG cache redirection - Lint and types clean (ruff, mypy --strict)
+
+Notes
+
+- No breaking changes to top-level imports (dictdb.Table, dictdb.DictDB, etc.)
+
+### Testing
+
+- Add comprehensive unit tests and reach 100% coverage
+  ([`2f01ddb`](https://github.com/mhbxyz/dictdb/commit/2f01ddbc15bbad524349dccf4b175e799a5f0cce))
+
+- Add targeted tests for uncovered branches: - Condition and boolean ops; invalid init;
+  PredicateExpr truthiness - Field.contains() edges (None, non-iterable) - Table: schema pk
+  injection, duplicate create_index no-op, index update no-change branch, validate_record without
+  schema - IndexBase abstract methods (NotImplemented), HashIndex empty-bucket deletion - Index
+  registry invalid type - Logging sampling filter for console and file sinks - DictDB: duplicate
+  table, Path args for save/load, _load_from_json happy/error paths - Persistence: invalid formats,
+  unsupported schema type, JSON schema type mapping - Enhance backup tests: cover backup_now failure
+  logging path - Adjust logging sampling expectation to account for initial DEBUG from
+  configure_logging - Result: tests now cover previously missed lines; overall coverage at 100%
+
+- **structure**: Reorganize tests into domain subpackages
+  ([`ba6b105`](https://github.com/mhbxyz/dictdb/commit/ba6b105bd2448bd0a29ff6f358ec16113167f6ff))
+
+- Move tests into logical folders: - core/: table, condition, field tests - index/: indexing and
+  registry tests - storage/: database, persistence, backup tests - query/: query feature tests -
+  obs/: logging tests - Keep top-level tests/conftest.py for shared fixtures across all subfolders -
+  No content changes to tests; only relocations - Verified: pytest runs recursively and passes (82
+  tests)
+
+
 ## v1.4.0 (2025-09-12)
 
 ### Bug Fixes
