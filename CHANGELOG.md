@@ -1,6 +1,107 @@
 # CHANGELOG
 
 
+## v1.3.0 (2025-09-12)
+
+### Build System
+
+- Add Makefile for common dev tasks (lint, test, typecheck, coverage, build, release)
+  ([`85c0781`](https://github.com/mhbxyz/dictdb/commit/85c07818a8a213a5751db25fb2583aadc6b122e9))
+
+- **version**: Expose runtime version from importlib.metadata
+  ([`d76ca6c`](https://github.com/mhbxyz/dictdb/commit/d76ca6cdc2c09836962ff3846c8ddc48e0506cd9))
+
+- Add dynamic __version__ in src/dictdb/__init__.py using importlib.metadata.version("dictdb") with
+  a safe fallback for editable installs. - Keep semantic-release bumping project.version in
+  pyproject.toml; add note to document the relationship.
+
+### Chores
+
+- Add pre-commit hooks and Makefile targets (install/run/update)
+  ([`0dae3c9`](https://github.com/mhbxyz/dictdb/commit/0dae3c9a428407e3b9206de19208bd4b51c93d63))
+
+### Code Style
+
+- Apply Ruff formatting across codebase; test: remove unused import in logging test
+  ([`42da13b`](https://github.com/mhbxyz/dictdb/commit/42da13bdd9a8ac2af1914149ef5ca31a7db41c7b))
+
+### Continuous Integration
+
+- Modernize workflow (setup-uv, caching, coverage artifact, build sanity)
+  ([`3cdef32`](https://github.com/mhbxyz/dictdb/commit/3cdef3224ae15ae9c14182cb1b22ac1d3942e4f2))
+
+- Split release workflow and add badges; docs: add publishing guide
+  ([`057410c`](https://github.com/mhbxyz/dictdb/commit/057410c32fe8a00804464bd92c31df52139f184c))
+
+### Documentation
+
+- Add pre-commit usage to README (install, run, update)
+  ([`31bcc67`](https://github.com/mhbxyz/dictdb/commit/31bcc677beb756ce21ab5df14dc3fcf412c6b177))
+
+- Embed README docs list with relative links to docs/
+  ([`93ad7b0`](https://github.com/mhbxyz/dictdb/commit/93ad7b08c51bc0134d95f7d4a95dbdff3040fbd1))
+
+- Link README docs section to GitHub blob URLs
+  ([`0e39522`](https://github.com/mhbxyz/dictdb/commit/0e3952297fc96d4b2d973100af50fc9be3473402))
+
+- Split README into docs/ sections and simplify README with links
+  ([`11cc5f6`](https://github.com/mhbxyz/dictdb/commit/11cc5f61b06a90a41f3adade8f898b6eeabcf4e8))
+
+- Update README with persistence, backup, and indexing details
+  ([`9fdeefb`](https://github.com/mhbxyz/dictdb/commit/9fdeefbb40e6b3f457f01e183b6c1ddb9f91bf9e))
+
+- Added new sections for persistence (synchronous and asynchronous save/load) - Documented the
+  BackupManager for automatic and immediate backups - Introduced indexing options with details on
+  hash and sorted indexes - Updated the API reference to include new methods (async_save,
+  async_load, create_index) - Revised usage examples and table of contents to reflect recent feature
+  additions
+
+This update ensures that the README is aligned with the current project capabilities.
+
+- Update roadmap.md to reflect the evolution of the project
+  ([`3a71d41`](https://github.com/mhbxyz/dictdb/commit/3a71d4116bf102344c0f5f313a9a50f865d1da5b))
+
+- **roadmap**: Add CLI to run dictdb as a program
+  ([`794a492`](https://github.com/mhbxyz/dictdb/commit/794a492fa3fad4a42bf00be313fcdc0b89fe0c99))
+
+Adds a “Command‑Line Interface” roadmap item with proposed commands (init, load <path>, query
+  "<expr>", export --format json|csv), packaging via [project.scripts], and acceptance criteria with
+  smoke tests and docs examples.
+
+- **roadmap**: Add structured roadmap with priorities, acceptance criteria, and nice-to-haves
+  ([`6f93420`](https://github.com/mhbxyz/dictdb/commit/6f93420c2e5e2dbb86f96d83b08cec063134f9ba))
+
+- **roadmap**: Refocus roadmap on actionable improvements
+  ([`1c609c2`](https://github.com/mhbxyz/dictdb/commit/1c609c29d54e438765019798d2dfd5aea99ad5db))
+
+- Remove “Strengths” section; concentrate on concurrency, atomic persistence, indexing/ planner, DSL
+  features, schema/validation, PK strategies, logging/observability, backup retention,
+  transactions/batching, CLI, perf/memory, and API/types. - Add concrete tasks with clear acceptance
+  criteria and notes.
+
+### Features
+
+- **table**: Add columns(), count()/size(), len(), and introspection helpers
+  ([`bc619ee`](https://github.com/mhbxyz/dictdb/commit/bc619ee31645e1ab09c59ac9a33fd1146a990355))
+
+- Add Table.columns(), count() (alias size()), len(), indexed_fields(), has_index(),
+  schema_fields(), primary_key_name() - Keep size() as alias to count() for compatibility - New
+  tests: tests/test_table_introspection.py covering new helpers - Docs: remove completed roadmap
+  item 12
+
+Tests: 54 passed; mypy --strict clean
+
+### Refactoring
+
+- **condition**: Rename Query -> Condition; return PredicateExpr from field ops
+  ([`f9162b2`](https://github.com/mhbxyz/dictdb/commit/f9162b243250b4d8adfdf844b51d5dc403727ade))
+
+- Replace public Query wrapper with Condition; introduce PredicateExpr as internal predicate type. -
+  Make Field comparison operators return PredicateExpr; update index optimization to accept
+  Condition. - Update exports and all tests to new API. - tests(persistence): remove asyncio marker
+  warnings by wrapping async calls with asyncio.run.
+
+
 ## v1.2.0 (2025-03-31)
 
 ### Features
