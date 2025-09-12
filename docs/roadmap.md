@@ -1,65 +1,70 @@
 # Roadmap
 
-This roadmap captures strengths, improvement opportunities, and concrete next steps gathered during a project review. Use it to open issues, group milestones, and track progress.
-
-## Strengths
-- Clear project structure (`src/`, `tests/`, focused modules), tidy public API.
-- Solid pytest coverage across CRUD, schema, indexing, logging, persistence.
-- Modern dev/CI: uv + lockfile, Makefile, pre-commit, split CI/Release, semantic‑release to PyPI.
-- Features: fluent query DSL, atomic updates with rollback, Loguru integration, simple backups, JSON/pickle + async persistence.
+This roadmap focuses on concrete improvements and extensions derived from the current codebase. Use it to file issues, group milestones, and track progress.
 
 ## Prioritized Improvements
-1) Concurrency & Backup Safety
-- Add coarse RW‑lock at `DictDB` level; wrap CRUD/select/save/load for consistent snapshots.
-- Optionally snapshot the DB (deep copy) before save to avoid long locks.
-- Acceptance: backups never race with writes; tests simulate concurrent writes during save.
+1) Concurrency & Thread Safety
+- Add table‑scoped RW locks; guard CRUD and index updates; ensure `BackupManager` reads consistent snapshots.
+- Optional snapshotting before save to reduce lock contention.
+- Acceptance: no races between writes and save/backup; concurrent tests pass.
 
-2) Persistence Robustness
-- Atomic writes: write to temp file, then rename.
-- Embed metadata in JSON: `{ "_meta": {"format": "dictdb", "version": 1}, ... }` for future migrations.
-- Acceptance: corrupted/partial files avoided; loader validates `_meta`.
+2) Robust, Atomic Persistence
+- JSON/pickle: write to temp + `fsync` + atomic `replace()`; add `_meta` = `{format: "dictdb", version: 1}` and checksum.
+- Strict loader: validate `_meta` and reject mismatches.
+- Acceptance: crash simulations never corrupt files; loader detects invalid inputs.
 
-3) Indexing Beyond Equality
-- Extend `SortedIndex` with range search; detect `<, <=, >, >=` in `select()`.
-- (Optional) simple composite keys for multi‑field equality.
-- Acceptance: range queries use index; measurable speedup in benchmarks.
+3) Indexing & Simple Planner
+- Use `SortedIndex` for range queries (`<, <=, >, >=`) and BETWEEN.
+- Add composite and unique indexes; `rebuild_index(field)` and stats for selectivity hints.
+- Acceptance: range filters avoid full scans; uniqueness enforced; benchmarks show speedups.
 
-4) Logging Consistency
-- Unify Loguru formatting (f‑strings or `{}` style placeholders). Fix `configure_logging()` debug message.
-- Acceptance: consistent logs; no stray `%s` placeholders.
+4) Query DSL & Results
+- Add `IN`, `contains`, `startswith/endswith`, `order_by`, `limit/offset`, projections with aliases.
+- Provide a tiny expression parser reused by the CLI (string → `Query`).
+- Acceptance: new operators covered by tests; deterministic ordering and pagination.
 
-5) Schema Ergonomics
-- Copy provided `schema` in `Table.__init__` before mutation (PK insert).
-- Document JSON‑persistence type limits; consider extension hooks.
-- Acceptance: no caller side‑effects; clearer docs/tests.
+5) Schema & Validation
+- Copy `schema` on `Table.__init__` before mutating; support `defaults`, `nullable`, coercion hooks, and field validators.
+- Add unique constraints independent of PK.
+- Acceptance: no caller side‑effects; helpful, typed errors; validation optional but predictable.
 
-6) Primary Key Generation
-- Support optional `pk_generator: Callable[[], Any]`; default auto‑int guarded to int‑only.
-- Acceptance: custom PK strategies work; errors clear for non‑int auto IDs.
+6) Primary Key Strategies
+- Support `pk_generator: Callable[[], Any]`; guard auto‑int to integers; document monotonic guarantees.
+- Acceptance: custom PK works across insert/update/delete; collision tests included.
 
-7) Error Semantics Documentation
-- Clarify that `update()`/`delete()` raise `RecordNotFoundError` on 0 matches; document rationale.
-- Acceptance: API docs updated; tests assert behavior.
+7) Logging & Observability
+- Fix `configure_logging()` to use Loguru `{}` formatting; add structured context (table, op, counts), optional JSON logs.
+- Sampling for verbose paths; consistent levels across modules.
+- Acceptance: zero `%s` artifacts; fields present in debug logs.
 
-8) Types & API Polish
-- Reduce `Any`/`cast` where feasible; add helpers like `Table.columns()` for discoverability.
-- Acceptance: stricter MyPy passes unchanged; improved IDE hints.
+8) Backup Manager Enhancements
+- Retention policy (max files/age), compression option, backoff on repeated failures.
+- Skip backups if unchanged since last snapshot; expose `on_success`/`on_error` hooks.
+- Acceptance: predictable retention; fewer redundant backups; surfaced errors.
 
-9) Performance Nits
-- Stream JSON directly to file; micro‑opt index maintenance already optimized on update.
-- Acceptance: simpler I/O path; no behavior change.
+9) Transactions & Batching
+- Context‑manager transactions with rollback on error; batch insert/update with partial‑failure reporting.
+- Acceptance: atomic multi‑record changes; property tests confirm invariants.
 
-10) Command‑Line Interface
-- Provide a `dictdb` CLI to run the database as a program.
-- Commands: `dictdb init`, `dictdb load <path>`, `dictdb query "<expr>"`, `dictdb export --format json|csv`.
-- Packaging: expose entry point via `pyproject.toml` under `[project.scripts]`.
-- Acceptance: smoke tests cover each command; docs include quick examples (e.g., `dictdb query 'from users where age > 30'`).
+10) CLI
+- Ship a `dictdb` CLI: `init`, `load <path>`, `query "<expr>"`, `export --format json|csv` with exit codes.
+- Packaging via `pyproject.toml` `[project.scripts]`; integration tests under `tests/test_cli.py`.
+- Acceptance: smoke tests pass; docs include examples.
+
+11) Performance & Memory
+- Stream JSON directly without building a large intermediate state; avoid unnecessary copies in `select()`.
+- Optional fast JSON backend behind a feature flag; micro‑opt index paths.
+- Acceptance: reduced peak memory during save; no API changes.
+
+12) API Polish & Types
+- Add `Table.columns()`, `Table.size()`, and introspection helpers; tighten types (TypedDict/Protocol) and reduce `Any`/`cast`.
+- Acceptance: `mypy src` passes in strict mode; improved IDE hints.
 
 ## Nice‑To‑Haves
-- Generated API docs (pdoc/Sphinx) under `docs/` to sync with code.
-- Example notebooks for queries, indexing, backups.
-- Lightweight benchmark target in CI (workflow_dispatch or nightly) reporting basic timings.
+- Generated API docs (pdoc/Sphinx) with examples and tutorial notebooks.
+- Export/import connectors (CSV, NDJSON) and a simple HTTP server for remote access.
+- CI micro‑benchmarks with trend reporting.
 
 ## Notes
-- When implementing locks, keep read‑heavy selects fast (prefer read locks, short critical sections).
-- Add tests for concurrent backup and for index‑backed range filters.
+- Keep read paths fast with read locks and short critical sections.
+- Add concurrency and corruption tests; include range‑index benchmarks.
