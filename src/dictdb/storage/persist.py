@@ -18,7 +18,8 @@ def save(db: DictDB, filename: Union[str, Path], file_format: str) -> None:
     match file_format:
         case "json":
             state: Dict[str, Any] = {"tables": {}}
-            for table_name, table in db.tables.items():
+            # Snapshot the table mapping to avoid iteration races if tables are added/removed
+            for table_name, table in list(db.tables.items()):
                 schema = None
                 if table.schema is not None:
                     schema = {

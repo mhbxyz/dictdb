@@ -3,11 +3,6 @@
 This roadmap focuses on concrete improvements and extensions derived from the current codebase. Use it to file issues, group milestones, and track progress.
 
 ## Improvements
-1) Concurrency & Thread Safety
-- Add table‑scoped RW locks; guard CRUD and index updates; ensure `BackupManager` reads consistent snapshots.
-- Optional snapshotting before save to reduce lock contention.
-- Acceptance: no races between writes and save/backup; concurrent tests pass.
-
 2) Transactions & Batching
 - Transaction layer: add explicit `begin_transaction()`, `commit_transaction()`, `rollback_transaction()` APIs, plus context‑manager sugar for `with db.transaction(): ...`.
 - Atomicity & isolation: treat multiple INSERT/UPDATE/DELETE operations as a single atomic unit; consider simple table‑scoped locking or optimistic concurrency to prevent conflicts under concurrent access.
