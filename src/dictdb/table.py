@@ -432,3 +432,75 @@ class Table:
         :rtype: list
         """
         return [record.copy() for record in self.records.values()]
+
+    def columns(self) -> List[str]:
+        """
+        Returns the list of column names for this table.
+
+        If a schema is defined, columns are derived from it. Otherwise, the
+        union of keys across all existing records is returned. The order is
+        deterministic (sorted) when derived from records.
+
+        :return: List of column names.
+        """
+        if self.schema is not None:
+            return list(self.schema.keys())
+        # Derive from data when schema is absent
+        cols: set[str] = set()
+        for rec in self.records.values():
+            cols.update(rec.keys())
+        return sorted(cols)
+
+    def size(self) -> int:
+        """
+        Returns the number of records stored in the table.
+
+        :return: Count of records.
+        """
+        return self.count()
+
+    def count(self) -> int:
+        """
+        Returns the number of records stored in the table.
+
+        Preferred over size(); size() remains as an alias.
+
+        :return: Count of records.
+        """
+        return len(self.records)
+
+    def __len__(self) -> int:  # pragma: no cover - trivial
+        return self.count()
+
+    def indexed_fields(self) -> List[str]:
+        """
+        Returns the list of fields that currently have an index.
+
+        :return: List of indexed field names.
+        """
+        return list(self.indexes.keys())
+
+    def has_index(self, field: str) -> bool:
+        """
+        Indicates whether an index exists for the given field.
+
+        :param field: Field name to check.
+        :return: True if an index exists for the field.
+        """
+        return field in self.indexes
+
+    def schema_fields(self) -> List[str]:
+        """
+        Returns the list of fields defined in the schema, or an empty list if no schema.
+
+        :return: Schema field names.
+        """
+        return list(self.schema.keys()) if self.schema is not None else []
+
+    def primary_key_name(self) -> str:
+        """
+        Returns the name of the primary key field for this table.
+
+        :return: Primary key field name.
+        """
+        return self.primary_key
