@@ -12,6 +12,7 @@ from ..index.registry import create as create_index
 from ..obs.logging import logger
 from .types import Record, Schema
 from .field import Field, _FieldCondition
+from .rwlock import RWLock
 
 
 class _RemovedField:
@@ -46,6 +47,8 @@ class Table:
                 self.schema[self.primary_key] = int
         # Indexes: mapping field name to an IndexBase instance.
         self.indexes: Dict[str, IndexBase] = {}
+        # Table-scoped reader-writer lock for concurrency control
+        self._lock: RWLock = RWLock()
 
     def __getattr__(self, attr: str) -> Field:
         """
@@ -78,6 +81,8 @@ class Table:
         self.records = state["records"]
         self.schema = state["schema"]
         self.indexes = {}
+        # Recreate non-pickled runtime attributes
+        self._lock = RWLock()
 
     def create_index(self, field: str, index_type: str = "hash") -> None:
         """
@@ -89,26 +94,33 @@ class Table:
         :param field: The field name on which to create an index.
         :param index_type: The type of index to create ("hash" or "sorted").
         """
-        if field in self.indexes:
-            return
-        try:
-            index_instance: IndexBase = create_index(index_type)
-            # Populate the index with existing records.
-            for pk, record in self.records.items():
-                if field in record:
-                    index_instance.insert(pk, record[field])
-            self.indexes[field] = index_instance
-            bind = logger.bind(
-                table=self.table_name, op="INDEX", field=field, index_type=index_type
-            )
-            bind.debug("[INDEX] Created {index_type} index on field '{table}'.")
-            bind.info(
-                "Index created on field '{field}' (type={index_type}) for table '{table}'."
-            )
-        except Exception as e:
-            logger.bind(
-                table=self.table_name, op="INDEX", field=field, index_type=index_type
-            ).error(f"[INDEX] Failed to create index on field '{field}': {e}")
+        with self._lock.write_lock():
+            if field in self.indexes:
+                return
+            try:
+                index_instance: IndexBase = create_index(index_type)
+                # Populate the index with existing records.
+                for pk, record in self.records.items():
+                    if field in record:
+                        index_instance.insert(pk, record[field])
+                self.indexes[field] = index_instance
+                bind = logger.bind(
+                    table=self.table_name,
+                    op="INDEX",
+                    field=field,
+                    index_type=index_type,
+                )
+                bind.debug("[INDEX] Created {index_type} index on field '{table}'.")
+                bind.info(
+                    "Index created on field '{field}' (type={index_type}) for table '{table}'."
+                )
+            except Exception as e:
+                logger.bind(
+                    table=self.table_name,
+                    op="INDEX",
+                    field=field,
+                    index_type=index_type,
+                ).error(f"[INDEX] Failed to create index on field '{field}': {e}")
 
     def _update_indexes_on_insert(self, record: Record) -> None:
         """
@@ -200,19 +212,20 @@ class Table:
         logger.bind(table=self.table_name, op="INSERT").debug(
             f"[INSERT] Attempting to insert record into '{self.table_name}': {record}"
         )
-        if self.primary_key not in record:
-            new_key = max(self.records.keys()) + 1 if self.records else 1
-            record[self.primary_key] = new_key
-        else:
-            key = record[self.primary_key]
-            if key in self.records:
-                raise DuplicateKeyError(
-                    f"Record with key '{key}' already exists in table '{self.table_name}'."
-                )
-        if self.schema is not None:
-            self.validate_record(record)
-        self.records[record[self.primary_key]] = record
-        self._update_indexes_on_insert(record)
+        with self._lock.write_lock():
+            if self.primary_key not in record:
+                new_key = max(self.records.keys()) + 1 if self.records else 1
+                record[self.primary_key] = new_key
+            else:
+                key = record[self.primary_key]
+                if key in self.records:
+                    raise DuplicateKeyError(
+                        f"Record with key '{key}' already exists in table '{self.table_name}'."
+                    )
+            if self.schema is not None:
+                self.validate_record(record)
+            self.records[record[self.primary_key]] = record
+            self._update_indexes_on_insert(record)
         logger.bind(
             table=self.table_name, op="INSERT", pk=record[self.primary_key]
         ).info("Record inserted into '{table}' (pk={pk}).")
@@ -246,23 +259,24 @@ class Table:
         logger.bind(table=self.table_name, op="SELECT").debug(
             f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}"
         )
-        results: List[Record] = []
-        candidate_records: List[Record]
-        if where is not None and self._is_indexed_eq_condition(where):
-            func = cast(_FieldCondition, where.condition.func)
-            field: str = func.field
-            value: Any = func.value
-            candidate_pks = self.indexes[field].search(value)
-            candidate_records = [self.records[pk] for pk in candidate_pks]
-        else:
-            candidate_records = list(self.records.values())
-        # Filter
-        filtered_records: List[Record] = []
-        for record in candidate_records:
-            if where is None or where(record):
-                filtered_records.append(record)
+        with self._lock.read_lock():
+            results: List[Record] = []
+            candidate_records: List[Record]
+            if where is not None and self._is_indexed_eq_condition(where):
+                func = cast(_FieldCondition, where.condition.func)
+                field: str = func.field
+                value: Any = func.value
+                candidate_pks = self.indexes[field].search(value)
+                candidate_records = [self.records[pk] for pk in candidate_pks]
+            else:
+                candidate_records = list(self.records.values())
+            # Filter
+            filtered_records: List[Record] = []
+            for record in candidate_records:
+                if where is None or where(record):
+                    filtered_records.append(record)
 
-        # Order
+        # Perform non-structural ops (ordering/projection) outside lock
         from ..query.order import order_records
         from ..query.pager import slice_records
         from ..query.projection import project_records
@@ -290,26 +304,27 @@ class Table:
         updated_keys: List[Any] = []
         backup: Dict[Any, Record] = {}
         updated_count = 0
-        try:
-            for key, record in self.records.items():
-                if where is None or where(record):
-                    backup[key] = record.copy()
-                    updated_keys.append(key)
-                    record.update(changes)
-                    if self.schema is not None:
-                        self.validate_record(record)
-                    updated_count += 1
-            if updated_count == 0:
-                raise RecordNotFoundError(
-                    f"No records match the update criteria in table '{self.table_name}'."
-                )
-        except Exception as e:
-            for key in updated_keys:
-                self.records[key] = backup[key]
-            raise e
+        with self._lock.write_lock():
+            try:
+                for key, record in self.records.items():
+                    if where is None or where(record):
+                        backup[key] = record.copy()
+                        updated_keys.append(key)
+                        record.update(changes)
+                        if self.schema is not None:
+                            self.validate_record(record)
+                        updated_count += 1
+                if updated_count == 0:
+                    raise RecordNotFoundError(
+                        f"No records match the update criteria in table '{self.table_name}'."
+                    )
+            except Exception as e:
+                for key in updated_keys:
+                    self.records[key] = backup[key]
+                raise e
 
-        for pk in updated_keys:
-            self._update_indexes_on_update(pk, backup[pk], self.records[pk])
+            for pk in updated_keys:
+                self._update_indexes_on_update(pk, backup[pk], self.records[pk])
         logger.bind(table=self.table_name, op="UPDATE", count=updated_count).info(
             "Updated {count} record(s) in '{table}'."
         )
@@ -326,20 +341,21 @@ class Table:
         logger.bind(table=self.table_name, op="DELETE").debug(
             f"[DELETE] Attempting delete in '{self.table_name}' with where={where}"
         )
-        keys_to_delete = [
-            key
-            for key, record in self.records.items()
-            if where is None or where(record)
-        ]
-        if not keys_to_delete:
-            raise RecordNotFoundError(
-                f"No records match the deletion criteria in table '{self.table_name}'."
-            )
-        for key in keys_to_delete:
-            record = self.records[key]
-            self._update_indexes_on_delete(record)
-            del self.records[key]
-        deleted_count = len(keys_to_delete)
+        with self._lock.write_lock():
+            keys_to_delete = [
+                key
+                for key, record in self.records.items()
+                if where is None or where(record)
+            ]
+            if not keys_to_delete:
+                raise RecordNotFoundError(
+                    f"No records match the deletion criteria in table '{self.table_name}'."
+                )
+            for key in keys_to_delete:
+                record = self.records[key]
+                self._update_indexes_on_delete(record)
+                del self.records[key]
+            deleted_count = len(keys_to_delete)
         logger.bind(table=self.table_name, op="DELETE", count=deleted_count).info(
             "Deleted {count} record(s) from '{table}'."
         )
@@ -352,7 +368,8 @@ class Table:
         :return: A dict mapping primary keys to record copies.
         :rtype: dict
         """
-        return {key: record.copy() for key, record in self.records.items()}
+        with self._lock.read_lock():
+            return {key: record.copy() for key, record in self.records.items()}
 
     def all(self) -> List[Record]:
         """
@@ -361,7 +378,8 @@ class Table:
         :return: A list of record copies.
         :rtype: list
         """
-        return [record.copy() for record in self.records.values()]
+        with self._lock.read_lock():
+            return [record.copy() for record in self.records.values()]
 
     def columns(self) -> List[str]:
         """
@@ -376,10 +394,11 @@ class Table:
         if self.schema is not None:
             return list(self.schema.keys())
         # Derive from data when schema is absent
-        cols: set[str] = set()
-        for rec in self.records.values():
-            cols.update(rec.keys())
-        return sorted(cols)
+        with self._lock.read_lock():
+            cols: set[str] = set()
+            for rec in self.records.values():
+                cols.update(rec.keys())
+            return sorted(cols)
 
     def size(self) -> int:
         """
@@ -397,7 +416,8 @@ class Table:
 
         :return: Count of records.
         """
-        return len(self.records)
+        with self._lock.read_lock():
+            return len(self.records)
 
     def __len__(self) -> int:  # pragma: no cover - trivial
         return self.count()
@@ -408,7 +428,8 @@ class Table:
 
         :return: List of indexed field names.
         """
-        return list(self.indexes.keys())
+        with self._lock.read_lock():
+            return list(self.indexes.keys())
 
     def has_index(self, field: str) -> bool:
         """
@@ -417,7 +438,8 @@ class Table:
         :param field: Field name to check.
         :return: True if an index exists for the field.
         """
-        return field in self.indexes
+        with self._lock.read_lock():
+            return field in self.indexes
 
     def schema_fields(self) -> List[str]:
         """
