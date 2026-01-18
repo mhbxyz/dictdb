@@ -280,17 +280,22 @@ class Table:
             else:
                 candidate_records = list(self.records.values())
             # Filter and copy records to ensure thread safety outside the lock
+            # Early termination: stop when we have enough records if no ORDER BY
             filtered_records: List[Record] = []
+            early_terminate = order_by is None and limit is not None
+            needed = offset + limit if early_terminate else None
             for record in candidate_records:
                 if where is None or where(record):
                     filtered_records.append(record.copy())
+                    if needed is not None and len(filtered_records) >= needed:
+                        break
 
         # Perform non-structural ops (ordering/projection) outside lock
-        from ..query.order import order_records
+        from ..query.order import order_records_with_limit
         from ..query.pager import slice_records
         from ..query.projection import project_records
 
-        ordered = order_records(filtered_records, order_by)
+        ordered = order_records_with_limit(filtered_records, order_by, limit, offset)
         sliced_records = slice_records(ordered, limit=limit, offset=offset)
         results = project_records(sliced_records, columns)
         return results

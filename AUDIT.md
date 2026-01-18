@@ -49,9 +49,9 @@
 
 ### Élevés
 
-| Problème | Fichier | Impact |
+| Problème | Fichier | Statut |
 |----------|---------|--------|
-| **Matérialisation complète des résultats** | `table.py:263-272` | Query LIMIT 10 sur 1M records charge tout en mémoire |
+| ~~Matérialisation complète des résultats~~ | `core/table.py`, `query/order.py` | **CORRIGÉ** - Early termination + heapq pour LIMIT |
 | **Pas d'optimisation index pour UPDATE/DELETE** | `table.py:309,345` | Toujours O(n) full scan |
 | **Thundering herd sur release lock** | `rwlock.py:84` | `notify_all()` réveille tous les threads |
 
