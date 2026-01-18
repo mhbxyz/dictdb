@@ -52,7 +52,7 @@
 | Problème | Fichier | Statut |
 |----------|---------|--------|
 | ~~Matérialisation complète des résultats~~ | `core/table.py`, `query/order.py` | **CORRIGÉ** - Early termination + heapq pour LIMIT |
-| **Pas d'optimisation index pour UPDATE/DELETE** | `table.py:309,345` | Toujours O(n) full scan |
+| ~~Pas d'optimisation index pour UPDATE/DELETE~~ | `core/table.py`, `index/sorted.py` | **CORRIGÉ** - Support index pour `==`, `<`, `<=`, `>`, `>=`, `is_in`, AND |
 | **Thundering herd sur release lock** | `rwlock.py:84` | `notify_all()` réveille tous les threads |
 
 ### Moyens

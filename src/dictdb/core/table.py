@@ -11,8 +11,9 @@ from ..index import IndexBase
 from ..index.registry import create as create_index
 from ..obs.logging import logger
 from .types import Record, Schema
-from .field import Field, _FieldCondition
+from .field import Field, _FieldCondition, _IsInCondition
 from .rwlock import RWLock
+from ..index.base import IndexBase as _IndexBase
 
 
 class _RemovedField:
@@ -167,19 +168,108 @@ class Table:
             if field in record:
                 index.delete(pk, record[field])
 
-    def _is_indexed_eq_condition(self, where: Condition) -> bool:
+    def _get_indexed_candidate_pks(self, where: Optional[Condition]) -> Optional[set[Any]]:
         """
-        Determines if the provided Condition represents a simple equality condition
-        on an indexed field.
+        Attempts to use indexes to get candidate primary keys for a condition.
 
-        :param where: The Condition wrapper.
-        :return: True if the condition is a simple equality on an indexed field.
+        Supports:
+        - Equality conditions (==) on any indexed field
+        - Range conditions (<, <=, >, >=) on SortedIndex fields
+        - is_in conditions on any indexed field
+        - AND conditions: uses first indexable sub-condition
+
+        :param where: The Condition wrapper, or None.
+        :return: Set of candidate PKs if index can be used, None otherwise.
         """
+        if where is None:
+            return None
+
         func = where.condition.func
+
+        # Handle simple field conditions
         if isinstance(func, _FieldCondition):
-            if func.op == operator.eq and func.field in self.indexes:
-                return True
-        return False
+            return self._search_index_for_field_condition(func)
+
+        # Handle is_in conditions
+        if isinstance(func, _IsInCondition):
+            if func.field in self.indexes:
+                return self.indexes[func.field].search_multi(func.values)
+            return None
+
+        # Handle compound AND conditions (lambda with closure)
+        # Try to extract indexable conditions from AND
+        return self._extract_indexed_pks_from_compound(where)
+
+    def _search_index_for_field_condition(self, func: _FieldCondition) -> Optional[set[Any]]:
+        """
+        Search index for a single field condition.
+
+        :param func: The _FieldCondition to evaluate.
+        :return: Set of candidate PKs if index can be used, None otherwise.
+        """
+        field = func.field
+        value = func.value
+        op = func.op
+
+        if field not in self.indexes:
+            return None
+
+        index = self.indexes[field]
+
+        # Equality - works with any index
+        if op == operator.eq:
+            return index.search(value)
+
+        # Range queries - only work with indexes that support range
+        if not index.supports_range:
+            return None
+
+        if op == operator.lt:
+            return index.search_lt(value)
+        if op == operator.le:
+            return index.search_lte(value)
+        if op == operator.gt:
+            return index.search_gt(value)
+        if op == operator.ge:
+            return index.search_gte(value)
+
+        return None
+
+    def _extract_indexed_pks_from_compound(self, where: Condition) -> Optional[set[Any]]:
+        """
+        Attempt to extract indexable conditions from compound AND/OR conditions.
+
+        For AND conditions, finds the first indexable sub-condition and uses it.
+        The remaining conditions will still be applied as filters.
+
+        :param where: The compound Condition.
+        :return: Set of candidate PKs if any sub-condition is indexable, None otherwise.
+        """
+        # Try to detect AND pattern by checking if func is a lambda that combines conditions
+        # This is a heuristic approach - we check the closure for PredicateExpr objects
+        func = where.condition.func
+        if not callable(func) or not hasattr(func, '__closure__') or func.__closure__ is None:
+            return None
+
+        # Extract cell contents from closure
+        for cell in func.__closure__:
+            try:
+                cell_contents = cell.cell_contents
+                # Check if it's a PredicateExpr with indexable content
+                from .condition import PredicateExpr
+                if isinstance(cell_contents, PredicateExpr):
+                    inner_func = cell_contents.func
+                    if isinstance(inner_func, _FieldCondition):
+                        result = self._search_index_for_field_condition(inner_func)
+                        if result is not None:
+                            return result
+                    if isinstance(inner_func, _IsInCondition):
+                        if inner_func.field in self.indexes:
+                            return self.indexes[inner_func.field].search_multi(inner_func.values)
+            except (ValueError, AttributeError):
+                continue
+
+        return None
 
     def validate_record(self, record: Record) -> None:
         """
@@ -271,12 +361,11 @@ class Table:
         with self._lock.read_lock():
             results: List[Record] = []
             candidate_records: List[Record]
-            if where is not None and self._is_indexed_eq_condition(where):
-                func = cast(_FieldCondition, where.condition.func)
-                field: str = func.field
-                value: Any = func.value
-                candidate_pks = self.indexes[field].search(value)
-                candidate_records = [self.records[pk] for pk in candidate_pks]
+            candidate_pks = self._get_indexed_candidate_pks(where)
+            if candidate_pks is not None:
+                candidate_records = [
+                    self.records[pk] for pk in candidate_pks if pk in self.records
+                ]
             else:
                 candidate_records = list(self.records.values())
             # Filter and copy records to ensure thread safety outside the lock
@@ -319,8 +408,17 @@ class Table:
         backup: Dict[Any, Record] = {}
         updated_count = 0
         with self._lock.write_lock():
+            # Use index if available to narrow down candidates
+            candidate_pks = self._get_indexed_candidate_pks(where)
+            if candidate_pks is not None:
+                candidate_items = [
+                    (pk, self.records[pk]) for pk in candidate_pks if pk in self.records
+                ]
+            else:
+                candidate_items = list(self.records.items())
+
             try:
-                for key, record in self.records.items():
+                for key, record in candidate_items:
                     if where is None or where(record):
                         backup[key] = record.copy()
                         updated_keys.append(key)
@@ -356,9 +454,18 @@ class Table:
             f"[DELETE] Deleting from '{self.table_name}' (filtered={where is not None})"
         )
         with self._lock.write_lock():
+            # Use index if available to narrow down candidates
+            candidate_pks = self._get_indexed_candidate_pks(where)
+            if candidate_pks is not None:
+                candidate_items = [
+                    (pk, self.records[pk]) for pk in candidate_pks if pk in self.records
+                ]
+            else:
+                candidate_items = list(self.records.items())
+
             keys_to_delete = [
                 key
-                for key, record in self.records.items()
+                for key, record in candidate_items
                 if where is None or where(record)
             ]
             if not keys_to_delete:

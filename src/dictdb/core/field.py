@@ -25,6 +25,21 @@ class _FieldCondition:
         return self.op(record.get(self.field), self.value)
 
 
+class _IsInCondition:
+    """
+    A callable class representing an 'is_in' condition on a field.
+
+    Encapsulates the field name and a set of values to check membership against.
+    """
+
+    def __init__(self, field: str, values: set[Any]) -> None:
+        self.field: str = field
+        self.values: set[Any] = values
+
+    def __call__(self, record: Dict[str, Any]) -> bool:
+        return record.get(self.field) in self.values
+
+
 class Field:
     """
     Represents a field (column) in a table and overloads comparison operators
@@ -57,7 +72,7 @@ class Field:
 
     def is_in(self, values: Iterable[Any]) -> PredicateExpr:
         vals = set(values)
-        return PredicateExpr(lambda rec: rec.get(self.name) in vals)
+        return PredicateExpr(_IsInCondition(self.name, vals))
 
     def contains(self, item: Any) -> PredicateExpr:
         def _pred(rec: Dict[str, Any]) -> bool:
