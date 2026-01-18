@@ -1,5 +1,5 @@
 import operator
-from typing import Any, Optional, Dict, List, cast, Tuple, Union
+from typing import Any, Optional, Dict, List, Tuple, Union
 
 from ..exceptions import (
     SchemaValidationError,
@@ -13,7 +13,6 @@ from ..obs.logging import logger
 from .types import Record, Schema
 from .field import Field, _FieldCondition, _IsInCondition
 from .rwlock import RWLock
-from ..index.base import IndexBase as _IndexBase
 
 
 class _RemovedField:
@@ -168,7 +167,9 @@ class Table:
             if field in record:
                 index.delete(pk, record[field])
 
-    def _get_indexed_candidate_pks(self, where: Optional[Condition]) -> Optional[set[Any]]:
+    def _get_indexed_candidate_pks(
+        self, where: Optional[Condition]
+    ) -> Optional[set[Any]]:
         """
         Attempts to use indexes to get candidate primary keys for a condition.
 
@@ -200,7 +201,9 @@ class Table:
         # Try to extract indexable conditions from AND
         return self._extract_indexed_pks_from_compound(where)
 
-    def _search_index_for_field_condition(self, func: _FieldCondition) -> Optional[set[Any]]:
+    def _search_index_for_field_condition(
+        self, func: _FieldCondition
+    ) -> Optional[set[Any]]:
         """
         Search index for a single field condition.
 
@@ -235,7 +238,9 @@ class Table:
 
         return None
 
-    def _extract_indexed_pks_from_compound(self, where: Condition) -> Optional[set[Any]]:
+    def _extract_indexed_pks_from_compound(
+        self, where: Condition
+    ) -> Optional[set[Any]]:
         """
         Attempt to extract indexable conditions from compound AND/OR conditions.
 
@@ -248,7 +253,11 @@ class Table:
         # Try to detect AND pattern by checking if func is a lambda that combines conditions
         # This is a heuristic approach - we check the closure for PredicateExpr objects
         func = where.condition.func
-        if not callable(func) or not hasattr(func, '__closure__') or func.__closure__ is None:
+        if (
+            not callable(func)
+            or not hasattr(func, "__closure__")
+            or func.__closure__ is None
+        ):
             return None
 
         # Extract cell contents from closure
@@ -257,6 +266,7 @@ class Table:
                 cell_contents = cell.cell_contents
                 # Check if it's a PredicateExpr with indexable content
                 from .condition import PredicateExpr
+
                 if isinstance(cell_contents, PredicateExpr):
                     inner_func = cell_contents.func
                     if isinstance(inner_func, _FieldCondition):
@@ -265,7 +275,9 @@ class Table:
                             return result
                     if isinstance(inner_func, _IsInCondition):
                         if inner_func.field in self.indexes:
-                            return self.indexes[inner_func.field].search_multi(inner_func.values)
+                            return self.indexes[inner_func.field].search_multi(
+                                inner_func.values
+                            )
             except (ValueError, AttributeError):
                 continue
 
@@ -371,8 +383,9 @@ class Table:
             # Filter and copy records to ensure thread safety outside the lock
             # Early termination: stop when we have enough records if no ORDER BY
             filtered_records: List[Record] = []
-            early_terminate = order_by is None and limit is not None
-            needed = offset + limit if early_terminate else None
+            needed = (
+                (offset + limit) if (limit is not None and order_by is None) else None
+            )
             for record in candidate_records:
                 if where is None or where(record):
                     filtered_records.append(record.copy())
@@ -464,9 +477,7 @@ class Table:
                 candidate_items = list(self.records.items())
 
             keys_to_delete = [
-                key
-                for key, record in candidate_items
-                if where is None or where(record)
+                key for key, record in candidate_items if where is None or where(record)
             ]
             if not keys_to_delete:
                 raise RecordNotFoundError(
