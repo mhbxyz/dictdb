@@ -16,12 +16,12 @@
 | ~~Désérialisation Pickle non sécurisée~~ | `storage/persist.py` | **CORRIGÉ** - `RestrictedUnpickler` avec whitelist |
 | ~~Sérialisation Pickle du DB entier~~ | `storage/persist.py` | **CORRIGÉ** - Seules les classes autorisées peuvent être désérialisées |
 
-### Élevés (2)
+### Élevés (1)
 
 | Problème | Fichier | Statut |
 |----------|---------|--------|
 | ~~Données sensibles dans les logs~~ | `core/table.py` | **CORRIGÉ** - Logs ne contiennent plus le contenu des records |
-| **Race condition dans BackupManager** | `storage/backup.py:85` | Collision de timestamps, écrasement de fichiers |
+| ~~Race condition dans BackupManager~~ | `storage/backup.py` | **CORRIGÉ** - Lock + timestamp microseconde + debounce |
 | **Contrôle de concurrence incomplet** | `core/table.py:279-286` | Ordering/projection hors du lock |
 
 ### Moyens (3)

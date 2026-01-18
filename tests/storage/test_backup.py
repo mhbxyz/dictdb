@@ -86,3 +86,59 @@ def test_backup_now_handles_failure(tmp_path: Path, log_capture: list[str]) -> N
     manager.backup_now()
     messages = "\n".join(log_capture)
     assert "Backup failed:" in messages
+
+
+def test_notify_change_debouncing(tmp_path: Path, test_db: DictDB) -> None:
+    """
+    Tests that notify_change() skips backup if called within min_backup_interval.
+
+    :param tmp_path: A temporary directory provided by pytest.
+    :param test_db: A DictDB fixture for testing.
+    """
+    backup_dir = tmp_path / "debounce_backup"
+    manager = BackupManager(
+        test_db,
+        backup_dir,
+        backup_interval=60,
+        file_format="json",
+        min_backup_interval=2.0,
+    )
+
+    # First call should create a backup
+    manager.notify_change()
+    time.sleep(0.1)
+    backup_files = list(backup_dir.glob("dictdb_backup_*.json"))
+    assert len(backup_files) == 1, "First notify_change should create a backup."
+
+    # Immediate second call should be skipped (debounced)
+    manager.notify_change()
+    time.sleep(0.1)
+    backup_files = list(backup_dir.glob("dictdb_backup_*.json"))
+    assert len(backup_files) == 1, "Second notify_change should be debounced."
+
+    # Wait for debounce interval to pass
+    time.sleep(2.0)
+    manager.notify_change()
+    time.sleep(0.1)
+    backup_files = list(backup_dir.glob("dictdb_backup_*.json"))
+    assert len(backup_files) == 2, (
+        "Third notify_change after interval should create backup."
+    )
+
+
+def test_backup_creates_unique_filenames(tmp_path: Path, test_db: DictDB) -> None:
+    """
+    Tests that rapid backups create unique filenames (no collisions).
+
+    :param tmp_path: A temporary directory provided by pytest.
+    :param test_db: A DictDB fixture for testing.
+    """
+    backup_dir = tmp_path / "unique_backup"
+    manager = BackupManager(test_db, backup_dir, backup_interval=60, file_format="json")
+
+    # Call backup_now() multiple times rapidly
+    for _ in range(5):
+        manager.backup_now()
+
+    backup_files = list(backup_dir.glob("dictdb_backup_*.json"))
+    assert len(backup_files) == 5, "Each backup_now() should create a unique file."

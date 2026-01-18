@@ -27,6 +27,7 @@ class BackupManager:
         backup_dir: Union[str, Path],
         backup_interval: int = 300,
         file_format: str = "json",
+        min_backup_interval: float = 5.0,
     ) -> None:
         """
         Initializes the BackupManager.
@@ -41,16 +42,24 @@ class BackupManager:
         :param file_format: The file format for backups ("json" or "pickle").
                             Default is "json".
         :type file_format: str
+        :param min_backup_interval: Minimum interval in seconds between backups
+                                    triggered by notify_change(). Default is 5.0.
+        :type min_backup_interval: float
         """
         self.db = db
         self.backup_dir = Path(backup_dir)
         self.backup_dir.mkdir(parents=True, exist_ok=True)
         self.backup_interval = backup_interval
         self.file_format = file_format.lower()
+        self.min_backup_interval = min_backup_interval
         self._stop_event = threading.Event()
         self._backup_thread = threading.Thread(
             target=self._run_periodic_backup, daemon=True
         )
+        # Lock to serialize backup operations and prevent race conditions
+        self._backup_lock = threading.Lock()
+        # Track last backup time for debouncing notify_change() calls
+        self._last_backup_time: float = 0.0
 
     def start(self) -> None:
         """
@@ -77,27 +86,42 @@ class BackupManager:
         """
         Performs an immediate backup of the current DictDB state.
 
-        The backup file is named with a timestamp and saved in the backup directory.
+        The backup file is named with a timestamp (microsecond precision) and
+        saved in the backup directory. Uses a lock to prevent concurrent backups.
 
         :return: None
         :rtype: None
         """
-        timestamp = int(time.time())
-        filename = self.backup_dir / f"dictdb_backup_{timestamp}.{self.file_format}"
-        logger.info(f"Performing immediate backup to {filename}.")
-        try:
-            self.db.save(str(filename), self.file_format)
-            logger.info(f"Backup saved successfully to {filename}.")
-        except Exception as e:
-            logger.error(f"Backup failed: {e}")
+        with self._backup_lock:
+            # Use microsecond precision to avoid filename collisions
+            timestamp = f"{time.time():.6f}".replace(".", "_")
+            filename = self.backup_dir / f"dictdb_backup_{timestamp}.{self.file_format}"
+            logger.info(f"Performing backup to {filename.name}.")
+            try:
+                self.db.save(str(filename), self.file_format)
+                self._last_backup_time = time.time()
+                logger.info(f"Backup saved successfully to {filename.name}.")
+            except Exception as e:
+                logger.error(f"Backup failed: {e}")
 
     def notify_change(self) -> None:
         """
         Notifies the BackupManager of a significant change, triggering an immediate backup.
 
+        Implements debouncing: if a backup occurred within min_backup_interval seconds,
+        the backup is skipped to avoid excessive I/O from rapid changes.
+
         :return: None
         :rtype: None
         """
+        with self._backup_lock:
+            elapsed = time.time() - self._last_backup_time
+            if elapsed < self.min_backup_interval:
+                logger.debug(
+                    f"Skipping backup, only {elapsed:.1f}s since last backup "
+                    f"(min interval: {self.min_backup_interval}s)."
+                )
+                return
         logger.debug("Significant change detected. Triggering immediate backup.")
         self.backup_now()
 
