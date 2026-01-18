@@ -139,28 +139,20 @@ class DictDB:
         :rtype: DictDB
         :raises ValueError: If an unsupported type is encountered in the schema.
         """
+        from ..core.types import parse_schema_type
+
         with open(filename, "r", encoding="utf-8") as f:
             state = json.load(f)
         new_db = cls()
-        allowed_types = {
-            "int": int,
-            "str": str,
-            "float": float,
-            "bool": bool,
-            "list": list,
-            "dict": dict,
-        }
         for table_name, table_data in state["tables"].items():
             primary_key = table_data["primary_key"]
             schema_data = table_data["schema"]
             schema = None
             if schema_data is not None:
-                schema = {}
-                for field, type_name in schema_data.items():
-                    if type_name in allowed_types:
-                        schema[field] = allowed_types[type_name]
-                    else:
-                        raise ValueError(f"Unsupported type in schema: {type_name}")
+                schema = {
+                    field: parse_schema_type(type_name)
+                    for field, type_name in schema_data.items()
+                }
             new_table = Table(table_name, primary_key=primary_key, schema=schema)
             for record in table_data["records"]:
                 new_table.insert(record)

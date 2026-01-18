@@ -85,7 +85,7 @@ def test_backup_now_handles_failure(tmp_path: Path, log_capture: list[str]) -> N
     # Should not raise, and should log the error
     manager.backup_now()
     messages = "\n".join(log_capture)
-    assert "Backup failed:" in messages
+    assert "Backup failed (1 consecutive):" in messages
 
 
 def test_notify_change_debouncing(tmp_path: Path, test_db: DictDB) -> None:
@@ -142,3 +142,53 @@ def test_backup_creates_unique_filenames(tmp_path: Path, test_db: DictDB) -> Non
 
     backup_files = list(backup_dir.glob("dictdb_backup_*.json"))
     assert len(backup_files) == 5, "Each backup_now() should create a unique file."
+
+
+def test_backup_failure_callback(tmp_path: Path) -> None:
+    """
+    Tests that the on_backup_failure callback is invoked with exception and failure count.
+    """
+
+    class FailingDB(DictDB):
+        def save(self, filename: str, file_format: str) -> None:  # type: ignore[override]
+            raise RuntimeError("boom")
+
+    failures: list[tuple[Exception, int]] = []
+
+    def on_failure(exc: Exception, count: int) -> None:
+        failures.append((exc, count))
+
+    backup_dir = tmp_path / "callback_backup"
+    manager = BackupManager(
+        FailingDB(),
+        backup_dir,
+        backup_interval=60,
+        file_format="json",
+        on_backup_failure=on_failure,
+    )
+
+    # Trigger multiple failures
+    manager.backup_now()
+    manager.backup_now()
+    manager.backup_now()
+
+    assert len(failures) == 3, "Callback should be invoked for each failure."
+    assert failures[0][1] == 1, "First failure count should be 1."
+    assert failures[1][1] == 2, "Second failure count should be 2."
+    assert failures[2][1] == 3, "Third failure count should be 3."
+    assert manager.consecutive_failures == 3
+
+
+def test_backup_success_resets_failure_count(tmp_path: Path, test_db: DictDB) -> None:
+    """
+    Tests that a successful backup resets the consecutive failure counter.
+    """
+    backup_dir = tmp_path / "reset_backup"
+    manager = BackupManager(test_db, backup_dir, backup_interval=60, file_format="json")
+
+    # Simulate failures by setting counter directly (since we can't easily fail then succeed)
+    manager._consecutive_failures = 5
+
+    # Successful backup should reset
+    manager.backup_now()
+    assert manager.consecutive_failures == 0, "Success should reset failure counter."

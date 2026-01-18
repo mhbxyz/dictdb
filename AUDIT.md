@@ -26,11 +26,13 @@
 | ~~Race condition dans BackupManager~~ | `storage/backup.py` | **CORRIGÉ** - Lock + timestamp microseconde + debounce |
 | ~~Contrôle de concurrence incomplet~~ | `core/table.py` | **CORRIGÉ** - Records copiés avant release du lock |
 
-### Moyens (3)
+### Moyens (0)
 
-- **Pas de protection path traversal** (`persist.py:36`) - Écriture possible n'importe où
-- **Validation de types faible** (`persist.py:74-78`) - Code dupliqué, extensible
-- **Exceptions silencieuses** (`backup.py:88-92`) - Échecs de backup non signalés
+*Tous les problèmes moyens ont été corrigés.*
+
+- ~~Pas de protection path traversal~~ - **CORRIGÉ** - Paramètre `allowed_dir` optionnel dans save/load
+- ~~Validation de types faible~~ - **CORRIGÉ** - Centralisé dans `core/types.py` (`parse_schema_type`, `serialize_schema_type`)
+- ~~Exceptions silencieuses~~ - **CORRIGÉ** - Callback `on_backup_failure` + compteur `consecutive_failures`
 
 ---
 
@@ -140,7 +142,7 @@
 
 | Dimension | Score | Commentaire |
 |-----------|-------|-------------|
-| **Sécurité** | 8/10 | Pickle sécurisé, logs redactés, reste path traversal |
+| **Sécurité** | 9/10 | Tous les problèmes critiques, élevés et moyens corrigés |
 | **Performance** | 6/10 | O(n²) sur opérations courantes |
 | **Qualité Code** | 7/10 | Bien structuré, quelques anti-patterns |
 | **Tests** | 6/10 | Bonne base, concurrence manquante |

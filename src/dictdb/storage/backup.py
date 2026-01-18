@@ -7,7 +7,7 @@ of a DictDB instance periodically and/or after significant changes.
 import threading
 import time
 from pathlib import Path
-from typing import Union
+from typing import Union, Callable, Optional
 
 from .database import DictDB
 from ..obs.logging import logger
@@ -28,6 +28,7 @@ class BackupManager:
         backup_interval: int = 300,
         file_format: str = "json",
         min_backup_interval: float = 5.0,
+        on_backup_failure: Optional[Callable[[Exception, int], None]] = None,
     ) -> None:
         """
         Initializes the BackupManager.
@@ -45,6 +46,9 @@ class BackupManager:
         :param min_backup_interval: Minimum interval in seconds between backups
                                     triggered by notify_change(). Default is 5.0.
         :type min_backup_interval: float
+        :param on_backup_failure: Optional callback invoked when a backup fails.
+                                  Receives the exception and consecutive failure count.
+        :type on_backup_failure: Optional[Callable[[Exception, int], None]]
         """
         self.db = db
         self.backup_dir = Path(backup_dir)
@@ -52,6 +56,7 @@ class BackupManager:
         self.backup_interval = backup_interval
         self.file_format = file_format.lower()
         self.min_backup_interval = min_backup_interval
+        self._on_backup_failure = on_backup_failure
         self._stop_event = threading.Event()
         self._backup_thread = threading.Thread(
             target=self._run_periodic_backup, daemon=True
@@ -60,6 +65,8 @@ class BackupManager:
         self._backup_lock = threading.Lock()
         # Track last backup time for debouncing notify_change() calls
         self._last_backup_time: float = 0.0
+        # Track consecutive backup failures for alerting
+        self._consecutive_failures: int = 0
 
     def start(self) -> None:
         """
@@ -100,9 +107,23 @@ class BackupManager:
             try:
                 self.db.save(str(filename), self.file_format)
                 self._last_backup_time = time.time()
+                self._consecutive_failures = 0
                 logger.info(f"Backup saved successfully to {filename.name}.")
             except Exception as e:
-                logger.error(f"Backup failed: {e}")
+                self._consecutive_failures += 1
+                logger.error(
+                    f"Backup failed ({self._consecutive_failures} consecutive): {e}"
+                )
+                if self._on_backup_failure is not None:
+                    try:
+                        self._on_backup_failure(e, self._consecutive_failures)
+                    except Exception as callback_err:
+                        logger.error(f"Backup failure callback raised: {callback_err}")
+
+    @property
+    def consecutive_failures(self) -> int:
+        """Returns the number of consecutive backup failures."""
+        return self._consecutive_failures
 
     def notify_change(self) -> None:
         """

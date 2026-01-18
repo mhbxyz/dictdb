@@ -51,3 +51,32 @@ def test_pickle_load_rejects_forbidden_class(tmp_path: Path) -> None:
 
     with pytest.raises(pickle.UnpicklingError, match="not allowed"):
         persist.load(malicious_path, "pickle")
+
+
+def test_path_traversal_blocked_on_save(tmp_path: Path) -> None:
+    """Verify that path traversal attempts are blocked when allowed_dir is set."""
+    db = DictDB()
+    db.create_table("t")
+
+    allowed_dir = tmp_path / "allowed"
+    allowed_dir.mkdir()
+
+    # Try to escape using path traversal
+    with pytest.raises(ValueError, match="outside the allowed directory"):
+        persist.save(
+            db, tmp_path / "allowed" / ".." / "escaped.json", "json", allowed_dir
+        )
+
+
+def test_path_traversal_blocked_on_load(tmp_path: Path) -> None:
+    """Verify that path traversal attempts are blocked when allowed_dir is set."""
+    allowed_dir = tmp_path / "allowed"
+    allowed_dir.mkdir()
+
+    # Create a file outside the allowed directory
+    outside_file = tmp_path / "outside.json"
+    outside_file.write_text('{"tables": {}}')
+
+    # Try to load from outside the allowed directory
+    with pytest.raises(ValueError, match="outside the allowed directory"):
+        persist.load(outside_file, "json", allowed_dir)
