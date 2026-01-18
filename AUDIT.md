@@ -7,12 +7,14 @@
 
 ## 1. SÉCURITÉ
 
-### Critiques (2)
+### Critiques (0)
 
-| Problème | Fichier | Impact |
+*Tous les problèmes critiques ont été corrigés.*
+
+| Problème | Fichier | Statut |
 |----------|---------|--------|
-| **Désérialisation Pickle non sécurisée** | `storage/persist.py:86` | RCE (Remote Code Execution) - Un attaquant peut exécuter du code arbitraire via un fichier pickle malveillant |
-| **Sérialisation Pickle du DB entier** | `storage/persist.py:40` | Surface d'attaque pour désérialisation malveillante |
+| ~~Désérialisation Pickle non sécurisée~~ | `storage/persist.py` | **CORRIGÉ** - `RestrictedUnpickler` avec whitelist |
+| ~~Sérialisation Pickle du DB entier~~ | `storage/persist.py` | **CORRIGÉ** - Seules les classes autorisées peuvent être désérialisées |
 
 ### Élevés (3)
 
@@ -112,7 +114,7 @@
 
 ### P0 - Immédiat
 
-1. **Désactiver pickle** ou implémenter whitelist stricte avec `Unpickler.find_class()`
+1. ~~**Désactiver pickle** ou implémenter whitelist stricte avec `Unpickler.find_class()`~~ **CORRIGÉ**
 2. **Remplacer `max()` par compteur** pour auto-PK : O(1) au lieu de O(n)
 3. **Ajouter tests de concurrence** - Au moins 30 tests multi-threads
 
@@ -136,11 +138,11 @@
 
 | Dimension | Score | Commentaire |
 |-----------|-------|-------------|
-| **Sécurité** | 4/10 | Pickle RCE est critique |
+| **Sécurité** | 7/10 | Pickle sécurisé, reste path traversal et logs |
 | **Performance** | 6/10 | O(n²) sur opérations courantes |
 | **Qualité Code** | 7/10 | Bien structuré, quelques anti-patterns |
 | **Tests** | 6/10 | Bonne base, concurrence manquante |
 | **Documentation** | 8/10 | Docstrings complètes |
 | **Architecture** | 8/10 | Modulaire et bien séparée |
 
-**Score Global: 6.5/10** - Bon projet avec des fondations solides mais des vulnérabilités critiques à corriger.
+**Score Global: 7/10** - Bon projet avec des fondations solides. Vulnérabilités critiques corrigées, reste des optimisations de performance.

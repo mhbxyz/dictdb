@@ -122,7 +122,9 @@ def test_writer_preference_blocks_new_readers() -> None:
     wait_for(r2_entered)
 
     # Verify ordering: writer exit occurs before R2 enters
-    assert order.index("W_exit") < order.index("R2_enter"), "Writer should proceed before new reader"
+    assert order.index("W_exit") < order.index("R2_enter"), (
+        "Writer should proceed before new reader"
+    )
 
     t_r1.join(1)
     t_w.join(1)
@@ -151,10 +153,11 @@ def test_writers_are_serialized() -> None:
     t2.start()
 
     time.sleep(0.03)
-    assert not w2_entered.is_set(), "Second writer entered concurrently with first writer"
+    assert not w2_entered.is_set(), (
+        "Second writer entered concurrently with first writer"
+    )
 
     w1_release.set()
     wait_for(w2_entered)
     t1.join(1)
     t2.join(1)
-

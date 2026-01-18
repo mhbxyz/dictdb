@@ -4,10 +4,49 @@ import json
 import pickle
 from io import BytesIO, StringIO
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, BinaryIO
 
 from .database import DictDB
 from ..core.table import Table
+
+
+# Whitelist of classes allowed for pickle deserialization.
+# This prevents arbitrary code execution from malicious pickle files.
+_PICKLE_ALLOWED_MODULES: Dict[str, set[str]] = {
+    "builtins": {
+        "dict",
+        "list",
+        "set",
+        "frozenset",
+        "tuple",
+        "str",
+        "int",
+        "float",
+        "bool",
+        "bytes",
+        "type",
+    },
+    "dictdb.storage.database": {"DictDB"},
+    "dictdb.core.table": {"Table"},
+}
+
+
+class _RestrictedUnpickler(pickle.Unpickler):
+    """Unpickler that only allows whitelisted classes to prevent RCE attacks."""
+
+    def find_class(self, module: str, name: str) -> Any:
+        allowed_names = _PICKLE_ALLOWED_MODULES.get(module, set())
+        if name in allowed_names:
+            return super().find_class(module, name)
+        raise pickle.UnpicklingError(
+            f"Deserialization of '{module}.{name}' is not allowed. "
+            "Only whitelisted classes can be loaded from pickle files."
+        )
+
+
+def _safe_pickle_load(f: BinaryIO) -> Any:
+    """Load a pickle file using the restricted unpickler."""
+    return _RestrictedUnpickler(f).load()
 
 
 def save(db: DictDB, filename: Union[str, Path], file_format: str) -> None:
@@ -83,7 +122,7 @@ def load(filename: Union[str, Path], file_format: str) -> DictDB:
             return new_db
         case "pickle":
             with open(filename, "rb") as f:
-                loaded_db: DictDB = pickle.load(f)
+                loaded_db: DictDB = _safe_pickle_load(f)
             return loaded_db
         case _:
             raise ValueError("Unsupported file_format. Please use 'json' or 'pickle'.")

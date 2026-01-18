@@ -1,4 +1,5 @@
 import json
+import pickle
 from pathlib import Path
 
 import pytest
@@ -35,3 +36,18 @@ def test_persist_load_unsupported_schema_type(tmp_path: Path) -> None:
     p.write_text(json.dumps(content))
     with pytest.raises(ValueError):
         persist.load(p, "json")
+
+
+def test_pickle_load_rejects_forbidden_class(tmp_path: Path) -> None:
+    """Verify that loading a pickle with non-whitelisted classes raises an error."""
+    # Create a malicious pickle that tries to instantiate os.system
+    # This would allow RCE if not blocked
+    import os
+
+    malicious_path = tmp_path / "malicious.pickle"
+    with open(malicious_path, "wb") as f:
+        # Pickle a reference to os.system (a dangerous callable)
+        pickle.dump(os.system, f)
+
+    with pytest.raises(pickle.UnpicklingError, match="not allowed"):
+        persist.load(malicious_path, "pickle")
