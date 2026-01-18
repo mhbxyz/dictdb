@@ -81,7 +81,7 @@ class Field:
                 return False
             try:
                 return item in val
-            except Exception:
+            except TypeError:
                 return False
 
         return PredicateExpr(_pred)
