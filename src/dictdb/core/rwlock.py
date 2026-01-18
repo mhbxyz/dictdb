@@ -61,8 +61,9 @@ class RWLock:
         """Release a previously acquired read lock."""
         with self._lock:
             self._readers -= 1
-            if self._readers == 0:
-                self._cond.notify_all()
+            if self._readers == 0 and self._writers_waiting > 0:
+                # Wake one waiting writer (avoids thundering herd)
+                self._cond.notify()
 
     def acquire_write(self) -> None:
         """Acquire an exclusive/write lock.
@@ -81,7 +82,12 @@ class RWLock:
         """Release a previously acquired write lock and wake waiters."""
         with self._lock:
             self._writer = False
-            self._cond.notify_all()
+            if self._writers_waiting > 0:
+                # Wake one waiting writer (avoids thundering herd)
+                self._cond.notify()
+            else:
+                # Wake all waiting readers
+                self._cond.notify_all()
 
     @contextmanager
     def read_lock(self) -> Iterator[None]:

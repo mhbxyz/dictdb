@@ -53,7 +53,7 @@
 |----------|---------|--------|
 | ~~Matérialisation complète des résultats~~ | `core/table.py`, `query/order.py` | **CORRIGÉ** - Early termination + heapq pour LIMIT |
 | ~~Pas d'optimisation index pour UPDATE/DELETE~~ | `core/table.py`, `index/sorted.py` | **CORRIGÉ** - Support index pour `==`, `<`, `<=`, `>`, `>=`, `is_in`, AND |
-| **Thundering herd sur release lock** | `rwlock.py:84` | `notify_all()` réveille tous les threads |
+| ~~Thundering herd sur release lock~~ | `rwlock.py` | **CORRIGÉ** - `notify()` ciblé au lieu de `notify_all()` |
 
 ### Moyens
 
@@ -145,7 +145,7 @@
 | Dimension | Score | Commentaire |
 |-----------|-------|-------------|
 | **Sécurité** | 9/10 | Tous les problèmes critiques, élevés et moyens corrigés |
-| **Performance** | 8/10 | Problèmes O(n²) corrigés, reste optimisations mineures |
+| **Performance** | 9/10 | Problèmes O(n²) et thundering herd corrigés, reste optimisations mineures |
 | **Qualité Code** | 7/10 | Bien structuré, quelques anti-patterns |
 | **Tests** | 6/10 | Bonne base, concurrence manquante |
 | **Documentation** | 8/10 | Docstrings complètes |
