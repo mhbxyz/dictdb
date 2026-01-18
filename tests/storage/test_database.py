@@ -1,6 +1,6 @@
 import pytest
 
-from dictdb import DictDB, Table
+from dictdb import DictDB, Table, TableNotFoundError
 
 
 def test_create_and_list_tables(db: DictDB) -> None:
@@ -42,20 +42,20 @@ def test_drop_table(db: DictDB) -> None:
     db.drop_table("products")
     tables = db.list_tables()
     assert "products" not in tables
-    with pytest.raises(ValueError):
+    with pytest.raises(TableNotFoundError):
         db.get_table("products")
 
 
 def test_drop_nonexistent_table(db: DictDB) -> None:
     """
-    Tests that dropping a nonexistent table raises a ValueError.
+    Tests that dropping a nonexistent table raises TableNotFoundError.
 
     :param db: A DictDB fixture with prepopulated tables.
     :type db: DictDB
     :return: None
     :rtype: None
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(TableNotFoundError):
         db.drop_table("nonexistent")
 
 

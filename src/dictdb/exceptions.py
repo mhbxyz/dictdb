@@ -10,9 +10,21 @@ class DuplicateKeyError(DictDBError):
     """
 
 
+class DuplicateTableError(DictDBError):
+    """
+    Exception raised when a table with the same name already exists.
+    """
+
+
 class RecordNotFoundError(DictDBError):
     """
     Exception raised when no records match the query criteria.
+    """
+
+
+class TableNotFoundError(DictDBError):
+    """
+    Exception raised when a table does not exist.
     """
 
 

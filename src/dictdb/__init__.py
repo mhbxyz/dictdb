@@ -4,7 +4,13 @@ from .storage.backup import BackupManager
 from .core.condition import Condition
 from .core.table import Table
 from .storage.database import DictDB
-from .exceptions import DuplicateKeyError, RecordNotFoundError, SchemaValidationError
+from .exceptions import (
+    DuplicateKeyError,
+    DuplicateTableError,
+    RecordNotFoundError,
+    SchemaValidationError,
+    TableNotFoundError,
+)
 from .obs.logging import logger, configure_logging
 
 # Expose the installed package version dynamically to avoid duplication.
@@ -20,8 +26,10 @@ __all__ = [
     "Table",
     "Condition",
     "DuplicateKeyError",
+    "DuplicateTableError",
     "RecordNotFoundError",
     "SchemaValidationError",
+    "TableNotFoundError",
     "logger",
     "configure_logging",
     "BackupManager",

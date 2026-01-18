@@ -1,9 +1,9 @@
 import asyncio
-import json
 from pathlib import Path
 from typing import Dict, List, Union
 
 from ..core.table import Table
+from ..exceptions import DuplicateTableError, TableNotFoundError
 from ..obs.logging import logger
 
 
@@ -32,7 +32,7 @@ class DictDB:
         :type table_name: str
         :param primary_key: The field to use as the primary key for this table.
         :type primary_key: str
-        :raises ValueError: If the table already exists.
+        :raises DuplicateTableError: If the table already exists.
         :return: None
         :rtype: None
         """
@@ -40,7 +40,7 @@ class DictDB:
             f"[DictDB] Creating table '{table_name}' with primary key '{primary_key}'."
         )
         if table_name in self.tables:
-            raise ValueError(f"Table '{table_name}' already exists.")
+            raise DuplicateTableError(f"Table '{table_name}' already exists.")
         self.tables[table_name] = Table(table_name, primary_key)
         logger.bind(
             component="DictDB", op="CREATE_TABLE", table=table_name, pk=primary_key
@@ -52,13 +52,13 @@ class DictDB:
 
         :param table_name: The name of the table to drop.
         :type table_name: str
-        :raises ValueError: If the table does not exist.
+        :raises TableNotFoundError: If the table does not exist.
         :return: None
         :rtype: None
         """
         logger.debug(f"[DictDB] Dropping table '{table_name}'.")
         if table_name not in self.tables:
-            raise ValueError(f"Table '{table_name}' does not exist.")
+            raise TableNotFoundError(f"Table '{table_name}' does not exist.")
         del self.tables[table_name]
         logger.bind(component="DictDB", op="DROP_TABLE", table=table_name).info(
             "Dropped table '{table}'."
@@ -70,13 +70,13 @@ class DictDB:
 
         :param table_name: The name of the table to retrieve.
         :type table_name: str
-        :raises ValueError: If the table does not exist.
+        :raises TableNotFoundError: If the table does not exist.
         :return: The requested Table instance.
         :rtype: Table
         """
         logger.debug(f"[DictDB] Retrieving table '{table_name}'.")
         if table_name not in self.tables:
-            raise ValueError(f"Table '{table_name}' does not exist.")
+            raise TableNotFoundError(f"Table '{table_name}' does not exist.")
         return self.tables[table_name]
 
     def list_tables(self) -> List[str]:
@@ -127,37 +127,6 @@ class DictDB:
         logger.bind(component="DictDB", op="SAVE", path=filename).info(
             "Save completed: {path}"
         )
-
-    @classmethod
-    def _load_from_json(cls, filename: str) -> "DictDB":
-        """
-        Loads a DictDB instance from a JSON file.
-
-        :param filename: The path to the JSON file.
-        :type filename: str
-        :return: A DictDB instance.
-        :rtype: DictDB
-        :raises ValueError: If an unsupported type is encountered in the schema.
-        """
-        from ..core.types import parse_schema_type
-
-        with open(filename, "r", encoding="utf-8") as f:
-            state = json.load(f)
-        new_db = cls()
-        for table_name, table_data in state["tables"].items():
-            primary_key = table_data["primary_key"]
-            schema_data = table_data["schema"]
-            schema = None
-            if schema_data is not None:
-                schema = {
-                    field: parse_schema_type(type_name)
-                    for field, type_name in schema_data.items()
-                }
-            new_table = Table(table_name, primary_key=primary_key, schema=schema)
-            for record in table_data["records"]:
-                new_table.insert(record)
-            new_db.tables[table_name] = new_table
-        return new_db
 
     @classmethod
     def load(cls, filename: Union[str, Path], file_format: str) -> "DictDB":
