@@ -270,11 +270,11 @@ class Table:
                 candidate_records = [self.records[pk] for pk in candidate_pks]
             else:
                 candidate_records = list(self.records.values())
-            # Filter
+            # Filter and copy records to ensure thread safety outside the lock
             filtered_records: List[Record] = []
             for record in candidate_records:
                 if where is None or where(record):
-                    filtered_records.append(record)
+                    filtered_records.append(record.copy())
 
         # Perform non-structural ops (ordering/projection) outside lock
         from ..query.order import order_records
