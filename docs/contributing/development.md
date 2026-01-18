@@ -23,5 +23,3 @@ make setup
 
 ## CI
 - CI: `.github/workflows/ci.yml`
-- Release: `.github/workflows/release.yml`
-- Publishing details: `docs/contributing/publishing.md`

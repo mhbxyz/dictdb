@@ -15,24 +15,9 @@ dev = [
     "coverage>=7.7.1",
     "mypy>=1.15.0",
     "pytest>=8.3.5",
-    "python-semantic-release>=9.21.0",
     "ruff>=0.11.2",
 ]
 
 [build-system]
-requires = ["hatchling", "python-semantic-release>=9.21.0"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.semantic_release]
-version_variable = [
-    "pyproject.toml:version"
-]
-
-major_on_zero = true
-upload_to_pypi = true
-branch = "main"
-repository_platform = "github"
-version_source = "commit"
-# Ensure the runtime version is sourced from the installed distribution via importlib.metadata
-# (see src/dictdb/__init__.py). Semantic-release will continue to bump the value in pyproject.toml.
-changelog_file = "CHANGELOG.md"

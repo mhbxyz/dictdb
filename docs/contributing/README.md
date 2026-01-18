@@ -1,7 +1,6 @@
 Contributing
 ============
 
-Development workflow and release process.
+Development workflow and guidelines.
 
 - [Development Guide](development.md)
-- [Publishing Workflow](publishing.md)
