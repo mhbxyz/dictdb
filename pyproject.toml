@@ -7,6 +7,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "loguru>=0.7.3",
+    "sortedcontainers>=2.4.0",
 ]
 
 [dependency-groups]

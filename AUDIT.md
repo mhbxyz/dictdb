@@ -38,12 +38,14 @@
 
 ## 2. PERFORMANCE
 
-### Critiques
+### Critiques (0)
 
-| Problème | Fichier | Complexité | Impact |
-|----------|---------|------------|--------|
-| **Auto-PK O(n) par INSERT** | `table.py:217` | O(n²) pour n inserts | `max(self.records.keys())` scanne toutes les clés |
-| **SortedIndex O(n) par INSERT** | `sorted.py:18` | O(n²) pour n inserts | `insort()` décale la liste entière |
+*Tous les problèmes critiques ont été corrigés.*
+
+| Problème | Fichier | Statut |
+|----------|---------|--------|
+| ~~Auto-PK O(n) par INSERT~~ | `core/table.py` | **CORRIGÉ** - Compteur monotone `_next_pk` : O(1) |
+| ~~SortedIndex O(n) par INSERT~~ | `index/sorted.py` | **CORRIGÉ** - `sortedcontainers.SortedList` : O(log n) |
 
 ### Élevés
 
@@ -119,14 +121,14 @@
 ### P0 - Immédiat
 
 1. ~~**Désactiver pickle** ou implémenter whitelist stricte avec `Unpickler.find_class()`~~ **CORRIGÉ**
-2. **Remplacer `max()` par compteur** pour auto-PK : O(1) au lieu de O(n)
+2. ~~**Remplacer `max()` par compteur** pour auto-PK : O(1) au lieu de O(n)~~ **CORRIGÉ**
 3. **Ajouter tests de concurrence** - Au moins 30 tests multi-threads
 
 ### P1 - Court terme
 
-4. **Ajouter protection path traversal** dans persist.py
+4. ~~**Ajouter protection path traversal** dans persist.py~~ **CORRIGÉ**
 5. ~~**Redacter les logs** - Ne pas logger le contenu des records~~ **CORRIGÉ**
-6. **Optimiser SortedIndex** - Utiliser arbre équilibré au lieu de liste
+6. ~~**Optimiser SortedIndex** - Utiliser arbre équilibré au lieu de liste~~ **CORRIGÉ** (`sortedcontainers.SortedList`)
 7. **Fix `raise e` → `raise`** dans table.py:324
 
 ### P2 - Moyen terme
@@ -143,10 +145,10 @@
 | Dimension | Score | Commentaire |
 |-----------|-------|-------------|
 | **Sécurité** | 9/10 | Tous les problèmes critiques, élevés et moyens corrigés |
-| **Performance** | 6/10 | O(n²) sur opérations courantes |
+| **Performance** | 8/10 | Problèmes O(n²) corrigés, reste optimisations mineures |
 | **Qualité Code** | 7/10 | Bien structuré, quelques anti-patterns |
 | **Tests** | 6/10 | Bonne base, concurrence manquante |
 | **Documentation** | 8/10 | Docstrings complètes |
 | **Architecture** | 8/10 | Modulaire et bien séparée |
 
-**Score Global: 7/10** - Bon projet avec des fondations solides. Vulnérabilités critiques corrigées, reste des optimisations de performance.
+**Score Global: 8/10** - Bon projet avec des fondations solides. Vulnérabilités critiques corrigées, performances optimisées.

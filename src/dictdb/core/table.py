@@ -42,6 +42,8 @@ class Table:
         self.primary_key: str = primary_key
         self.records: Dict[Any, Record] = {}  # Maps primary key to record (dict)
         self.schema = schema
+        # Monotonic counter for auto-generated primary keys (O(1) instead of O(n))
+        self._next_pk: int = 1
         if self.schema is not None:
             if self.primary_key not in self.schema:
                 self.schema[self.primary_key] = int
@@ -69,6 +71,7 @@ class Table:
             "primary_key": self.primary_key,
             "records": self.records,
             "schema": self.schema,
+            "_next_pk": self._next_pk,
             # Note: indexes are not pickled; they can be recreated if needed.
         }
 
@@ -80,6 +83,9 @@ class Table:
         self.primary_key = state["primary_key"]
         self.records = state["records"]
         self.schema = state["schema"]
+        # Recalculate _next_pk from records for backwards compatibility
+        int_keys = [k for k in self.records.keys() if isinstance(k, int)]
+        self._next_pk = max(int_keys) + 1 if int_keys else 1
         self.indexes = {}
         # Recreate non-pickled runtime attributes
         self._lock = RWLock()
@@ -214,14 +220,17 @@ class Table:
         )
         with self._lock.write_lock():
             if self.primary_key not in record:
-                new_key = max(self.records.keys()) + 1 if self.records else 1
-                record[self.primary_key] = new_key
+                record[self.primary_key] = self._next_pk
+                self._next_pk += 1
             else:
                 key = record[self.primary_key]
                 if key in self.records:
                     raise DuplicateKeyError(
                         f"Record with key '{key}' already exists in table '{self.table_name}'."
                     )
+                # Update counter if explicit PK is >= current counter (avoid future collisions)
+                if isinstance(key, int) and key >= self._next_pk:
+                    self._next_pk = key + 1
             if self.schema is not None:
                 self.validate_record(record)
             self.records[record[self.primary_key]] = record
