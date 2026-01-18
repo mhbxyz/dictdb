@@ -2,85 +2,108 @@
   <img src="https://raw.githubusercontent.com/mhbxyz/dictdb/main/docs/DictDBLogo.png" alt="DictDB Logo" width="800"/>
 </p>
 
-![CI](https://github.com/mhbxyz/dictdb/actions/workflows/ci.yml/badge.svg)
-[![Release](https://github.com/mhbxyz/dictdb/actions/workflows/release.yml/badge.svg)](https://github.com/mhbxyz/dictdb/actions/workflows/release.yml)
-[![PyPI version](https://img.shields.io/pypi/v/dictdb.svg)](https://pypi.org/project/dictdb/)
-[![Python versions](https://img.shields.io/pypi/pyversions/dictdb.svg)](https://pypi.org/project/dictdb/)
-[![License](https://img.shields.io/github/license/mhbxyz/dictdb.svg)](LICENSE)
-[![Code style: Ruff](https://img.shields.io/badge/code%20style-Ruff-46a2f1.svg)](https://docs.astral.sh/ruff/)
-[![Type checking: MyPy](https://img.shields.io/badge/type%20checking-mypy-2A6DB2.svg)](https://mypy-lang.org/)
+<p align="center">
+  <a href="https://github.com/mhbxyz/dictdb/actions/workflows/ci.yml"><img src="https://github.com/mhbxyz/dictdb/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mhbxyz/dictdb.svg" alt="License"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.13+-blue.svg" alt="Python 3.13+"></a>
+  <a href="https://docs.astral.sh/ruff/"><img src="https://img.shields.io/badge/code%20style-Ruff-46a2f1.svg" alt="Code style: Ruff"></a>
+  <a href="https://mypy-lang.org/"><img src="https://img.shields.io/badge/type%20checking-mypy-2A6DB2.svg" alt="Type checking: MyPy"></a>
+</p>
 
-DictDB is an in‑memory, dictionary-based database for Python with SQL‑like CRUD, optional schemas, fast equality lookups via indexes, and a fluent query DSL. Great for prototyping, tests, and lightweight relational workflows without a full DB engine.
+---
 
-## Install
+**DictDB** is an in-memory, dictionary-based database for Python with SQL-like CRUD operations, optional schemas, fast lookups via indexes, and a fluent query DSL.
 
-- Dev setup: `make setup`
-- PyPI: `pip install dictdb` (once published)
+Perfect for prototyping, testing, and lightweight relational workflows without a full database engine.
+
+## Features
+
+- **SQL-like CRUD** — `INSERT`, `SELECT`, `UPDATE`, `DELETE` with familiar semantics
+- **Fluent Query DSL** — Build conditions with Python operators: `table.age >= 18`
+- **Indexes** — Hash indexes for O(1) equality lookups, sorted indexes for range queries
+- **Optional Schemas** — Type validation when you need it, flexibility when you don't
+- **Persistence** — Save/load to JSON or Pickle
+- **Thread-Safe** — Reader-writer locks for concurrent access
+- **Zero Config** — No server, no setup, just Python
+
+## Installation
+
+```bash
+# Development setup
+make setup
+
+# Or install dependencies manually
+uv sync
+```
 
 ## Quickstart
 
 ```python
-from dictdb import DictDB, Condition, configure_logging
+from dictdb import DictDB, Condition
 
-# Configure human-friendly console logs (see docs/guides/logging.md for JSON logs)
-configure_logging(level="INFO", console=True)
-
-# 1) Create DB and a table
+# Create database and table
 db = DictDB()
 db.create_table("employees", primary_key="emp_id")
 employees = db.get_table("employees")
 
-# 2) Insert data (auto-assigns emp_id if missing)
+# Insert records (auto-assigns emp_id if missing)
 employees.insert({"emp_id": 101, "name": "Alice", "department": "IT", "age": 30})
 employees.insert({"name": "Bob", "department": "HR", "age": 26})
 employees.insert({"name": "Charlie", "department": "IT", "age": 35})
 
-# 3) Optional: add an index to accelerate equality lookups
+# Add index for faster lookups
 employees.create_index("department", index_type="hash")
 
-# 4) Query: IT employees, projecting only their names
-it_people = employees.select(columns=["name"], where=Condition(employees.department == "IT"))
-print("IT:", it_people)  # [{'name': 'Alice'}, {'name': 'Charlie'}]
+# Query with conditions
+it_team = employees.select(
+    columns=["name"],
+    where=Condition(employees.department == "IT")
+)
+# [{'name': 'Alice'}, {'name': 'Charlie'}]
 
-# 5) Update: move Bob to IT
-employees.update({"department": "IT"}, where=Condition(employees.name == "Bob"))
+# Update records
+employees.update(
+    {"department": "IT"},
+    where=Condition(employees.name == "Bob")
+)
 
-# 6) Delete: remove junior employees under 28
+# Delete with range condition
 employees.delete(where=Condition(employees.age < 28))
 
-# 7) Introspection helpers
-print("Columns:", employees.columns())
-print("Count:", employees.count(), "Indexed:", employees.indexed_fields())
-
-# 8) Persist and load
+# Persist to disk
 db.save("employees.json", file_format="json")
+
+# Load from disk
 db2 = DictDB.load("employees.json", file_format="json")
-print("Loaded tables:", db2.list_tables())
 ```
 
-## Docs
+## Documentation
 
-- [Getting Started](docs/getting-started/README.md)
-- [Guides](docs/guides/README.md)
-- [Reference](docs/reference/README.md)
-- [Contributing](docs/contributing/README.md)
-- [Roadmap](docs/roadmap.md)
+| Section | Description |
+|---------|-------------|
+| [Getting Started](docs/getting-started/README.md) | Installation and first steps |
+| [Guides](docs/guides/README.md) | In-depth tutorials |
+| [Reference](docs/reference/README.md) | API documentation |
+| [Contributing](docs/contributing/README.md) | How to contribute |
+| [Roadmap](docs/roadmap.md) | Future plans |
 
 ## Development
 
-- Setup: `make setup` then `make hooks-install`
-- Validate: `make check` (format, lint, types, tests)
-- Coverage: `make coverage`
+```bash
+# Setup environment
+make setup
+make hooks-install
 
-### Benchmarks
+# Run all checks (format, lint, types, tests)
+make check
 
-Run the SELECT benchmark with and without indexes:
+# Run tests with coverage
+make coverage
 
-- Quick run: `make benchmark`
-- Tunable: `make bench ROWS=20000 ITERATIONS=20 AGE=30 SEED=123`
-- JSON output: `make bench OUT=results.json`
-- Profile: `make bench PROFILE=1`
+# Run benchmarks
+make benchmark
+```
 
-See docs/guides/benchmark.md for more details and CLI options.
+## License
 
-Contributions and bug reports are welcome.
+MIT License — see [LICENSE](LICENSE) for details.
