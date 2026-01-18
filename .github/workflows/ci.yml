@@ -42,6 +42,9 @@ jobs:
       - name: Sync with uv.lock (dev)
         run: uv sync --group dev
 
+      - name: Format check (Ruff)
+        run: uv run ruff format --check .
+
       - name: Lint (Ruff)
         run: uv run ruff check . --output-format=github
 

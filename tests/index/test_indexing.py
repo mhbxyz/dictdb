@@ -141,11 +141,13 @@ def test_and_condition_uses_index() -> None:
     """Test that AND conditions use index for the first indexable condition."""
     table = Table("orders", primary_key="id")
     for i in range(1, 101):
-        table.insert({
-            "id": i,
-            "status": "pending" if i % 2 == 0 else "completed",
-            "amount": i * 10,
-        })
+        table.insert(
+            {
+                "id": i,
+                "status": "pending" if i % 2 == 0 else "completed",
+                "amount": i * 10,
+            }
+        )
     table.create_index("status", index_type="hash")
 
     # AND condition: status == 'pending' AND amount > 500
@@ -161,7 +163,9 @@ def test_update_uses_index() -> None:
     """Test that UPDATE uses index for faster filtering."""
     table = Table("users", primary_key="id")
     for i in range(1, 101):
-        table.insert({"id": i, "role": "user" if i % 10 != 0 else "admin", "active": True})
+        table.insert(
+            {"id": i, "role": "user" if i % 10 != 0 else "admin", "active": True}
+        )
     table.create_index("role", index_type="hash")
 
     # Update using indexed condition
