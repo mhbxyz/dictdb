@@ -210,7 +210,7 @@ class Table:
         :raises SchemaValidationError: If the record fails schema validation.
         """
         logger.bind(table=self.table_name, op="INSERT").debug(
-            f"[INSERT] Attempting to insert record into '{self.table_name}': {record}"
+            f"[INSERT] Inserting record into '{self.table_name}'"
         )
         with self._lock.write_lock():
             if self.primary_key not in record:
@@ -257,7 +257,7 @@ class Table:
         :return: A list of matching records.
         """
         logger.bind(table=self.table_name, op="SELECT").debug(
-            f"[SELECT] From table '{self.table_name}' with columns={columns}, where={where}"
+            f"[SELECT] Querying '{self.table_name}' (columns={columns}, filtered={where is not None})"
         )
         with self._lock.read_lock():
             results: List[Record] = []
@@ -299,7 +299,7 @@ class Table:
         :return: The number of records updated.
         """
         logger.bind(table=self.table_name, op="UPDATE").debug(
-            f"[UPDATE] Attempting update in '{self.table_name}' with changes={changes}, where={where}"
+            f"[UPDATE] Updating records in '{self.table_name}' (fields={list(changes.keys())})"
         )
         updated_keys: List[Any] = []
         backup: Dict[Any, Record] = {}
@@ -339,7 +339,7 @@ class Table:
         :return: The number of records deleted.
         """
         logger.bind(table=self.table_name, op="DELETE").debug(
-            f"[DELETE] Attempting delete in '{self.table_name}' with where={where}"
+            f"[DELETE] Deleting from '{self.table_name}' (filtered={where is not None})"
         )
         with self._lock.write_lock():
             keys_to_delete = [

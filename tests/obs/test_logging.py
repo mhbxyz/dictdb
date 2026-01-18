@@ -83,9 +83,9 @@ def test_crud_logging_in_file(tmp_path: Path) -> None:
     assert "[DictDB] Creating table 'users'" in content, (
         "Did not find expected 'create_table' log line in file."
     )
-    assert "[INSERT] Attempting to insert record into 'users'" in content, (
+    assert "[INSERT] Inserting record into 'users'" in content, (
         "Did not find expected 'insert' log line in file."
     )
-    assert "[SELECT] From table 'users'" in content, (
+    assert "[SELECT] Querying 'users'" in content, (
         "Did not find expected 'select' log line in file."
     )

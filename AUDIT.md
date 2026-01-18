@@ -16,11 +16,11 @@
 | ~~Désérialisation Pickle non sécurisée~~ | `storage/persist.py` | **CORRIGÉ** - `RestrictedUnpickler` avec whitelist |
 | ~~Sérialisation Pickle du DB entier~~ | `storage/persist.py` | **CORRIGÉ** - Seules les classes autorisées peuvent être désérialisées |
 
-### Élevés (3)
+### Élevés (2)
 
-| Problème | Fichier | Impact |
+| Problème | Fichier | Statut |
 |----------|---------|--------|
-| **Données sensibles dans les logs** | `core/table.py:213` | Enregistre le contenu complet des records (potentiellement PII, mots de passe) |
+| ~~Données sensibles dans les logs~~ | `core/table.py` | **CORRIGÉ** - Logs ne contiennent plus le contenu des records |
 | **Race condition dans BackupManager** | `storage/backup.py:85` | Collision de timestamps, écrasement de fichiers |
 | **Contrôle de concurrence incomplet** | `core/table.py:279-286` | Ordering/projection hors du lock |
 
@@ -121,7 +121,7 @@
 ### P1 - Court terme
 
 4. **Ajouter protection path traversal** dans persist.py
-5. **Redacter les logs** - Ne pas logger le contenu des records
+5. ~~**Redacter les logs** - Ne pas logger le contenu des records~~ **CORRIGÉ**
 6. **Optimiser SortedIndex** - Utiliser arbre équilibré au lieu de liste
 7. **Fix `raise e` → `raise`** dans table.py:324
 
@@ -138,7 +138,7 @@
 
 | Dimension | Score | Commentaire |
 |-----------|-------|-------------|
-| **Sécurité** | 7/10 | Pickle sécurisé, reste path traversal et logs |
+| **Sécurité** | 8/10 | Pickle sécurisé, logs redactés, reste path traversal |
 | **Performance** | 6/10 | O(n²) sur opérations courantes |
 | **Qualité Code** | 7/10 | Bien structuré, quelques anti-patterns |
 | **Tests** | 6/10 | Bonne base, concurrence manquante |
