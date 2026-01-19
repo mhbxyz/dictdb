@@ -55,11 +55,11 @@
 | ~~Pas d'optimisation index pour UPDATE/DELETE~~ | `core/table.py`, `index/sorted.py` | **CORRIGÉ** - Support index pour `==`, `<`, `<=`, `>`, `>=`, `is_in`, AND |
 | ~~Thundering herd sur release lock~~ | `rwlock.py` | **CORRIGÉ** - `notify()` ciblé au lieu de `notify_all()` |
 
-### Moyens
+### Moyens (1)
 
-- ORDER BY composé inefficace (tri multiple au lieu de tuple key)
-- Copie des records dans SELECT (double la mémoire)
-- JSON entier en mémoire pendant save (spike 2-3x)
+- ~~ORDER BY composé inefficace (tri multiple au lieu de tuple key)~~ **CORRIGÉ** - Single-pass avec `_ReverseOrder` wrapper
+- ~~Copie des records dans SELECT (double la mémoire)~~ **CORRIGÉ** - Paramètre `copy=False` ajouté à `select()`
+- ~~JSON entier en mémoire pendant save (spike 2-3x)~~ **CORRIGÉ** - Streaming JSON avec écriture directe
 - Pas de backup incrémental
 
 ---
