@@ -149,7 +149,7 @@
 1. ~~**Aucun test de concurrence**~~ **CORRIGÉ** - 41 tests multi-threads
 2. ~~**Edge cases pagination**~~ **CORRIGÉ** - 15 tests ajoutés (offset négatif, limit=0, offset > total)
 3. ~~**SortedIndex**~~ **CORRIGÉ** - Tests dédiés ajoutés
-4. **Erreurs I/O** - Permissions, disque plein, fichiers corrompus
+4. ~~**Erreurs I/O**~~ **CORRIGÉ** - 19 tests ajoutés (permissions, fichiers corrompus, fichiers inexistants)
 
 ---
 
@@ -184,7 +184,7 @@
 | **Sécurité** | 9/10 | Tous les problèmes critiques, élevés et moyens corrigés |
 | **Performance** | 10/10 | Tous les problèmes corrigés : O(n²), thundering herd, ORDER BY, streaming, incremental backup |
 | **Qualité Code** | 9/10 | Anti-patterns corrigés, API cohérente, code dédupliqué |
-| **Tests** | 9/10 | 185 tests, concurrence complète (41 tests), paramétrisation |
+| **Tests** | 10/10 | 204 tests, concurrence complète (41 tests), I/O errors, paramétrisation |
 | **Documentation** | 8/10 | Docstrings complètes |
 | **Architecture** | 8/10 | Modulaire et bien séparée |
 
