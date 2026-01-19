@@ -23,6 +23,9 @@ help: ## Show available targets
 	@echo "Benchmarks:"
 	@grep -E '^(benchmark|bench):.*?##' Makefile | awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 	@echo ""
+	@echo "Documentation:"
+	@grep -E '^(docs|docs-serve):.*?##' Makefile | awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+	@echo ""
 	@echo "Git Hooks:"
 	@grep -E '^(hooks-install|hooks-run|hooks-update):.*?##' Makefile | awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 	@echo ""
@@ -49,6 +52,7 @@ clean: ## Remove caches and build artifacts
 	rm -rf build dist *.egg-info
 	rm -rf coverage.xml htmlcov .coverage
 	rm -rf __pycache__ **/__pycache__
+	rm -rf site
 	@echo "✓ Cleaned"
 
 # =============================================================================
@@ -116,6 +120,19 @@ bench: ## Run benchmark with custom parameters (ROWS, ITERATIONS, AGE, SEED, OUT
 		--seed $(SEED) \
 		$(if $(PROFILE),--profile,) \
 		$(if $(OUT),--json-out $(OUT),)
+
+# =============================================================================
+# Documentation
+# =============================================================================
+
+.PHONY: docs docs-serve
+
+docs: ## Build documentation
+	$(UV) run --group docs mkdocs build --strict
+	@echo "\n✓ Documentation built in site/"
+
+docs-serve: ## Serve documentation locally
+	$(UV) run --group docs mkdocs serve
 
 # =============================================================================
 # Git Hooks

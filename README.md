@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/mhbxyz/dictdb/main/docs/DictDBLogo.png" alt="DictDB Logo" width="800"/>
+  <img src="https://raw.githubusercontent.com/mhbxyz/dictdb/main/docs/assets/dictdb-logo.png" alt="DictDB Logo" width="800"/>
 </p>
 
 <p align="center">
@@ -181,13 +181,16 @@ db.list_tables()             # ["employees", "staff"]
 
 ## Documentation
 
+Full documentation available at **[mhbxyz.github.io/dictdb](https://mhbxyz.github.io/dictdb)**
+
 | Section | Description |
 |---------|-------------|
-| [Getting Started](docs/getting-started/README.md) | Installation and first steps |
-| [Guides](docs/guides/README.md) | In-depth tutorials |
-| [Reference](docs/reference/README.md) | API documentation |
-| [Contributing](docs/contributing/README.md) | How to contribute |
-| [Roadmap](docs/roadmap.md) | Future plans |
+| [Getting Started](https://mhbxyz.github.io/dictdb/getting-started/) | Installation and first steps |
+| [Query DSL](https://mhbxyz.github.io/dictdb/guides/query-dsl/) | Build conditions with Python operators |
+| [Indexes](https://mhbxyz.github.io/dictdb/guides/indexes/) | Speed up queries |
+| [Schemas](https://mhbxyz.github.io/dictdb/guides/schemas/) | Type validation |
+| [Persistence](https://mhbxyz.github.io/dictdb/guides/persistence/) | Save and load databases |
+| [API Reference](https://mhbxyz.github.io/dictdb/api/) | Complete API documentation |
 
 ## Development
 
@@ -208,4 +211,4 @@ make benchmark
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+Apache License 2.0 — see [LICENSE](LICENSE) for details.
