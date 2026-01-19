@@ -116,7 +116,7 @@ class Table:
                     field=field,
                     index_type=index_type,
                 )
-                bind.debug("[INDEX] Created {index_type} index on field '{table}'.")
+                bind.debug("[INDEX] Created {index_type} index on field '{field}'.")
                 bind.info(
                     "Index created on field '{field}' (type={index_type}) for table '{table}'."
                 )
@@ -307,13 +307,14 @@ class Table:
                     f"Field '{field}' is not defined in the schema."
                 )
 
-    def insert(self, record: Record) -> None:
+    def insert(self, record: Record) -> Any:
         """
         Inserts a new record into the table, with optional schema validation.
 
         Auto-assigns a primary key if not provided. Updates indexes automatically.
 
         :param record: The record to insert.
+        :return: The primary key of the inserted record.
         :raises DuplicateKeyError: If a record with the same primary key exists.
         :raises SchemaValidationError: If the record fails schema validation.
         """
@@ -335,11 +336,13 @@ class Table:
                     self._next_pk = key + 1
             if self.schema is not None:
                 self.validate_record(record)
-            self.records[record[self.primary_key]] = record
+            pk = record[self.primary_key]
+            self.records[pk] = record
             self._update_indexes_on_insert(record)
-        logger.bind(
-            table=self.table_name, op="INSERT", pk=record[self.primary_key]
-        ).info("Record inserted into '{table}' (pk={pk}).")
+        logger.bind(table=self.table_name, op="INSERT", pk=pk).info(
+            "Record inserted into '{table}' (pk={pk})."
+        )
+        return pk
 
     def select(
         self,
@@ -443,10 +446,10 @@ class Table:
                     raise RecordNotFoundError(
                         f"No records match the update criteria in table '{self.table_name}'."
                     )
-            except Exception as e:
+            except Exception:
                 for key in updated_keys:
                     self.records[key] = backup[key]
-                raise e
+                raise
 
             for pk in updated_keys:
                 self._update_indexes_on_update(pk, backup[pk], self.records[pk])
