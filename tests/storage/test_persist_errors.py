@@ -103,7 +103,6 @@ def test_load_nonexistent_pickle(tmp_path: Path) -> None:
 
 def test_save_to_readonly_directory(tmp_path: Path) -> None:
     """Verify that saving to a read-only directory raises PermissionError."""
-    import os
     import stat
 
     readonly_dir = tmp_path / "readonly"
