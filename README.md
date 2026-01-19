@@ -29,11 +29,21 @@ Perfect for prototyping, testing, and lightweight relational workflows without a
 ## Installation
 
 ```bash
-# Development setup
-make setup
+pip install dctdb
+```
 
-# Or install dependencies manually
-uv sync
+```python
+from dictdb import DictDB, Condition
+```
+
+> **Note:** The PyPI package is `dctdb`, but the import name is `dictdb`.
+
+### Development Setup
+
+```bash
+git clone https://github.com/mhbxyz/dictdb.git
+cd dictdb
+make setup
 ```
 
 ## Quickstart

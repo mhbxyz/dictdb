@@ -47,6 +47,19 @@ users.delete(where=Condition(users.name == "Bob"))
 db.save("data.json", file_format="json")
 ```
 
+## Installation
+
+```bash
+pip install dctdb
+```
+
+```python
+from dictdb import DictDB, Condition
+```
+
+!!! note "Package name"
+    The PyPI package is `dctdb`, but the import name is `dictdb`.
+
 ## Requirements
 
 - Python 3.13+

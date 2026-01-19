@@ -2,6 +2,17 @@
 
 ## Installation
 
+```bash
+pip install dctdb
+```
+
+```python
+from dictdb import DictDB, Condition
+```
+
+!!! note "Package name"
+    The PyPI package is `dctdb`, but the import name is `dictdb`.
+
 ### Development Setup
 
 Clone the repository and install dependencies:
