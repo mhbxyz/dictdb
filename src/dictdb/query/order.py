@@ -13,21 +13,26 @@ class _ReverseOrder:
         self.value = value
 
     def __lt__(self, other: "_ReverseOrder") -> bool:
-        return self.value > other.value
+        result: bool = self.value > other.value
+        return result
 
     def __le__(self, other: "_ReverseOrder") -> bool:
-        return self.value >= other.value
+        result: bool = self.value >= other.value
+        return result
 
     def __gt__(self, other: "_ReverseOrder") -> bool:
-        return self.value < other.value
+        result: bool = self.value < other.value
+        return result
 
     def __ge__(self, other: "_ReverseOrder") -> bool:
-        return self.value <= other.value
+        result: bool = self.value <= other.value
+        return result
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, _ReverseOrder):
             return NotImplemented
-        return self.value == other.value
+        result: bool = self.value == other.value
+        return result
 
 
 def order_records(
