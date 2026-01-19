@@ -37,3 +37,8 @@ ignore_missing_imports = true
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests", "benchmarks"]
+# B403: pickle is an intentional feature for persistence
+skips = ["B403"]

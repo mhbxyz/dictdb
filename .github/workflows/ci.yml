@@ -17,6 +17,36 @@ env:
   PYTHON_VERSION_FILE: .python-version
 
 jobs:
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ${{ env.PYTHON_VERSION_FILE }}
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: uv-${{ runner.os }}-
+
+      - run: uv sync --group dev
+
+      - name: Install security tools
+        run: uv pip install pip-audit bandit
+
+      - name: pip-audit (dependency vulnerabilities)
+        run: uv run pip-audit
+
+      - name: bandit (SAST)
+        run: uv run bandit -r src/dictdb -c pyproject.toml
+
   lint:
     name: Lint & Format
     runs-on: ubuntu-latest
