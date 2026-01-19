@@ -66,30 +66,37 @@
 
 ## 3. QUALITÉ DU CODE
 
-### Anti-patterns d'exception
+### Anti-patterns d'exception (0)
 
-| Problème | Fichier | Correction |
-|----------|---------|------------|
-| `raise e` au lieu de `raise` | `table.py:324` | Perd le traceback original |
-| `except Exception:` trop large | `field.py:69`, `table.py:117` | Cache les bugs |
-| Exceptions avalées | `backup.py:88-92` | Échecs silencieux |
+*Tous les anti-patterns d'exception ont été corrigés.*
 
-### Duplication de code
+| Problème | Fichier | Statut |
+|----------|---------|--------|
+| ~~`raise e` au lieu de `raise`~~ | `table.py` | **CORRIGÉ** - Utilise `raise` pour préserver le traceback |
+| ~~`except Exception:` trop large~~ | `field.py` | **CORRIGÉ** - `except TypeError:` pour `contains()` |
+| ~~Exceptions avalées~~ | `backup.py` | **CORRIGÉ** - Logging + callback `on_backup_failure` |
 
-- **Logique JSON schema** dupliquée dans `database.py:145-162` ET `persist.py:60-78`
-- **Conversion Path→str** répétée 4 fois
+### Duplication de code (0)
 
-### Incohérences API
+*Toute duplication de code a été éliminée.*
 
-| Problème | Détail |
+- ~~**Logique JSON schema** dupliquée~~ - **CORRIGÉ** : Supprimé `_load_from_json()` de `database.py`, centralisé dans `persist.py`
+
+### Incohérences API (0)
+
+*Toutes les incohérences API ont été corrigées.*
+
+| Problème | Statut |
 |----------|--------|
-| Types d'exceptions | `ValueError` pour tables vs `DuplicateKeyError` pour records |
-| `size()` vs `count()` | Deux méthodes identiques |
-| `insert()` retourne `None` | Devrait retourner la PK pour chaînage |
+| ~~Types d'exceptions~~ | **CORRIGÉ** - `DuplicateTableError` et `TableNotFoundError` ajoutés |
+| `size()` vs `count()` | Conservé pour compatibilité (`size()` est un alias documenté) |
+| ~~`insert()` retourne `None`~~ | **CORRIGÉ** - Retourne maintenant la PK |
 
-### Logging
+### Logging (0)
 
-- `table.py:113` - Placeholders `{index_type}` non remplis dans le message
+*Tous les problèmes de logging ont été corrigés.*
+
+- ~~`table.py` - Placeholders non remplis~~ - **CORRIGÉ** : `{field}` au lieu de `{table}`
 
 ---
 
@@ -146,7 +153,7 @@
 |-----------|-------|-------------|
 | **Sécurité** | 9/10 | Tous les problèmes critiques, élevés et moyens corrigés |
 | **Performance** | 9/10 | Problèmes O(n²) et thundering herd corrigés, reste optimisations mineures |
-| **Qualité Code** | 7/10 | Bien structuré, quelques anti-patterns |
+| **Qualité Code** | 9/10 | Anti-patterns corrigés, API cohérente, code dédupliqué |
 | **Tests** | 6/10 | Bonne base, concurrence manquante |
 | **Documentation** | 8/10 | Docstrings complètes |
 | **Architecture** | 8/10 | Modulaire et bien séparée |
