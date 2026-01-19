@@ -10,7 +10,7 @@ import json
 import threading
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import pytest
 
@@ -335,7 +335,7 @@ def test_backup_failure_counter_thread_safety(tmp_path: Path) -> None:
     failure_count = 0
 
     class CountingFailDB(DictDB):
-        def save(self, filename: str, file_format: str) -> None:
+        def save(self, filename: Union[str, Path], file_format: str) -> None:
             nonlocal failure_count
             failure_count += 1
             raise RuntimeError("Intentional failure")
