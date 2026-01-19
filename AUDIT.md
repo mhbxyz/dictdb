@@ -55,12 +55,14 @@
 | ~~Pas d'optimisation index pour UPDATE/DELETE~~ | `core/table.py`, `index/sorted.py` | **CORRIGÉ** - Support index pour `==`, `<`, `<=`, `>`, `>=`, `is_in`, AND |
 | ~~Thundering herd sur release lock~~ | `rwlock.py` | **CORRIGÉ** - `notify()` ciblé au lieu de `notify_all()` |
 
-### Moyens (1)
+### Moyens (0)
+
+*Tous les problèmes moyens ont été corrigés.*
 
 - ~~ORDER BY composé inefficace (tri multiple au lieu de tuple key)~~ **CORRIGÉ** - Single-pass avec `_ReverseOrder` wrapper
 - ~~Copie des records dans SELECT (double la mémoire)~~ **CORRIGÉ** - Paramètre `copy=False` ajouté à `select()`
 - ~~JSON entier en mémoire pendant save (spike 2-3x)~~ **CORRIGÉ** - Streaming JSON avec écriture directe
-- Pas de backup incrémental
+- ~~Pas de backup incrémental~~ **CORRIGÉ** - Dirty tracking + delta files + compaction automatique
 
 ---
 
@@ -152,7 +154,7 @@
 | Dimension | Score | Commentaire |
 |-----------|-------|-------------|
 | **Sécurité** | 9/10 | Tous les problèmes critiques, élevés et moyens corrigés |
-| **Performance** | 9/10 | Problèmes O(n²) et thundering herd corrigés, reste optimisations mineures |
+| **Performance** | 10/10 | Tous les problèmes corrigés : O(n²), thundering herd, ORDER BY, streaming, incremental backup |
 | **Qualité Code** | 9/10 | Anti-patterns corrigés, API cohérente, code dédupliqué |
 | **Tests** | 6/10 | Bonne base, concurrence manquante |
 | **Documentation** | 8/10 | Docstrings complètes |

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import pickle
+import time
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, Union, BinaryIO, Optional
+from typing import Any, Dict, List, Union, BinaryIO, Optional
 
 from .database import DictDB
 from ..core.table import Table
@@ -170,3 +171,132 @@ def load(
             return loaded_db
         case _:
             raise ValueError("Unsupported file_format. Please use 'json' or 'pickle'.")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Incremental backup (delta) support
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def has_changes(db: DictDB) -> bool:
+    """
+    Check if the database has any uncommitted changes since the last backup.
+
+    :param db: The DictDB instance to check.
+    :return: True if any table has dirty or deleted records.
+    """
+    return any(table.has_changes() for table in db.tables.values())
+
+
+def save_delta(
+    db: DictDB,
+    filename: Union[str, Path],
+    allowed_dir: Optional[Path] = None,
+    clear_tracking: bool = True,
+) -> bool:
+    """
+    Save only the changes (delta) since the last backup.
+
+    The delta file contains upserted records and deleted primary keys for each
+    table that has changes. This is much smaller than a full backup when only
+    a few records have changed.
+
+    :param db: The DictDB instance to back up.
+    :param filename: Path to the delta file.
+    :param allowed_dir: If provided, ensures path is within this directory.
+    :param clear_tracking: If True, clears dirty tracking after successful save.
+    :return: True if a delta was saved, False if no changes to save.
+    """
+    validated_path = _validate_path(filename, allowed_dir)
+
+    # Collect deltas from all tables
+    delta_data: Dict[str, Dict[str, List[Any]]] = {}
+    tables_with_changes: List[Table] = []
+
+    for table_name, table in db.tables.items():
+        if not table.has_changes():
+            continue
+        tables_with_changes.append(table)
+        delta_data[table_name] = {
+            "upserts": table.get_dirty_records(),
+            "deletes": table.get_deleted_pks(),
+        }
+
+    if not delta_data:
+        return False
+
+    # Write delta file
+    delta_doc = {
+        "type": "delta",
+        "timestamp": time.time(),
+        "tables": delta_data,
+    }
+    with open(validated_path, "w", encoding="utf-8") as f:
+        json.dump(delta_doc, f, indent=2)
+
+    # Clear tracking after successful write
+    if clear_tracking:
+        for table in tables_with_changes:
+            table.clear_dirty_tracking()
+
+    return True
+
+
+def apply_delta(
+    db: DictDB,
+    filename: Union[str, Path],
+    allowed_dir: Optional[Path] = None,
+) -> int:
+    """
+    Apply a delta file to the database.
+
+    Upserts (inserts or updates) the dirty records and deletes the deleted PKs.
+
+    :param db: The DictDB instance to update.
+    :param filename: Path to the delta file.
+    :param allowed_dir: If provided, ensures path is within this directory.
+    :return: Total number of records affected (upserts + deletes).
+    :raises ValueError: If the file is not a valid delta file.
+    """
+    validated_path = _validate_path(filename, allowed_dir)
+
+    with open(validated_path, "r", encoding="utf-8") as f:
+        delta_doc = json.load(f)
+
+    if delta_doc.get("type") != "delta":
+        raise ValueError(f"File '{filename}' is not a valid delta file.")
+
+    affected = 0
+    for table_name, changes in delta_doc["tables"].items():
+        if table_name not in db.tables:
+            # Table doesn't exist, skip (or could create it)
+            continue
+
+        table = db.tables[table_name]
+        pk_field = table.primary_key
+
+        # Apply upserts
+        for record in changes.get("upserts", []):
+            pk = record.get(pk_field)
+            if pk is not None and pk in table.records:
+                # Update existing record
+                with table._lock.write_lock():
+                    table.records[pk].update(record)
+            else:
+                # Insert new record (bypass validation for restore)
+                with table._lock.write_lock():
+                    if pk is None:
+                        pk = table._next_pk
+                        table._next_pk += 1
+                        record[pk_field] = pk
+                    table.records[pk] = record
+            affected += 1
+
+        # Apply deletes
+        for pk in changes.get("deletes", []):
+            if pk in table.records:
+                with table._lock.write_lock():
+                    del table.records[pk]
+                affected += 1
+
+    return affected

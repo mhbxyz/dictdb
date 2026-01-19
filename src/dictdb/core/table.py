@@ -51,6 +51,9 @@ class Table:
         self.indexes: Dict[str, IndexBase] = {}
         # Table-scoped reader-writer lock for concurrency control
         self._lock: RWLock = RWLock()
+        # Dirty tracking for incremental backups
+        self._dirty_pks: set[Any] = set()  # PKs inserted or updated since last backup
+        self._deleted_pks: set[Any] = set()  # PKs deleted since last backup
 
     def __getattr__(self, attr: str) -> Field:
         """
@@ -89,6 +92,8 @@ class Table:
         self.indexes = {}
         # Recreate non-pickled runtime attributes
         self._lock = RWLock()
+        self._dirty_pks = set()
+        self._deleted_pks = set()
 
     def create_index(self, field: str, index_type: str = "hash") -> None:
         """
@@ -339,6 +344,9 @@ class Table:
             pk = record[self.primary_key]
             self.records[pk] = record
             self._update_indexes_on_insert(record)
+            # Track for incremental backup
+            self._dirty_pks.add(pk)
+            self._deleted_pks.discard(pk)
         logger.bind(table=self.table_name, op="INSERT", pk=pk).info(
             "Record inserted into '{table}' (pk={pk})."
         )
@@ -456,6 +464,8 @@ class Table:
 
             for pk in updated_keys:
                 self._update_indexes_on_update(pk, backup[pk], self.records[pk])
+            # Track for incremental backup
+            self._dirty_pks.update(updated_keys)
         logger.bind(table=self.table_name, op="UPDATE", count=updated_count).info(
             "Updated {count} record(s) in '{table}'."
         )
@@ -493,6 +503,9 @@ class Table:
                 record = self.records[key]
                 self._update_indexes_on_delete(record)
                 del self.records[key]
+            # Track for incremental backup
+            self._deleted_pks.update(keys_to_delete)
+            self._dirty_pks.difference_update(keys_to_delete)
             deleted_count = len(keys_to_delete)
         logger.bind(table=self.table_name, op="DELETE", count=deleted_count).info(
             "Deleted {count} record(s) from '{table}'."
@@ -594,3 +607,48 @@ class Table:
         :return: Primary key field name.
         """
         return self.primary_key
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Incremental backup support
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def has_changes(self) -> bool:
+        """
+        Returns True if there are uncommitted changes since the last backup.
+
+        :return: True if dirty or deleted records exist.
+        """
+        with self._lock.read_lock():
+            return bool(self._dirty_pks or self._deleted_pks)
+
+    def get_dirty_records(self) -> List[Record]:
+        """
+        Returns copies of all records that have been inserted or updated
+        since the last backup.
+
+        :return: List of dirty record copies.
+        """
+        with self._lock.read_lock():
+            return [
+                self.records[pk].copy()
+                for pk in self._dirty_pks
+                if pk in self.records
+            ]
+
+    def get_deleted_pks(self) -> List[Any]:
+        """
+        Returns the primary keys of records deleted since the last backup.
+
+        :return: List of deleted primary keys.
+        """
+        with self._lock.read_lock():
+            return list(self._deleted_pks)
+
+    def clear_dirty_tracking(self) -> None:
+        """
+        Clears the dirty and deleted tracking sets.
+        Called after a successful backup to reset change tracking.
+        """
+        with self._lock.write_lock():
+            self._dirty_pks.clear()
+            self._deleted_pks.clear()
