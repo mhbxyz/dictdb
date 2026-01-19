@@ -354,6 +354,7 @@ class Table:
         order_by: Optional[Union[str, List[str], Tuple[str, ...]]] = None,
         limit: Optional[int] = None,
         offset: int = 0,
+        copy: bool = True,
     ) -> List[Record]:
         """
         Retrieves records matching an optional condition.
@@ -368,6 +369,8 @@ class Table:
         :param order_by: Field name or list of field names to sort by. Prefix with '-' for descending.
         :param limit: Maximum number of records to return after offset.
         :param offset: Number of records to skip from the start.
+        :param copy: If True (default), return copies of records for thread safety.
+                     Set to False for read-only use cases to reduce memory usage.
         :return: A list of matching records.
         """
         logger.bind(table=self.table_name, op="SELECT").debug(
@@ -383,7 +386,7 @@ class Table:
                 ]
             else:
                 candidate_records = list(self.records.values())
-            # Filter and copy records to ensure thread safety outside the lock
+            # Filter (and optionally copy) records; copy ensures thread safety outside lock
             # Early termination: stop when we have enough records if no ORDER BY
             filtered_records: List[Record] = []
             needed = (
@@ -391,7 +394,7 @@ class Table:
             )
             for record in candidate_records:
                 if where is None or where(record):
-                    filtered_records.append(record.copy())
+                    filtered_records.append(record.copy() if copy else record)
                     if needed is not None and len(filtered_records) >= needed:
                         break
 
