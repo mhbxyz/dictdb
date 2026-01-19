@@ -27,7 +27,7 @@ jobs:
         with:
           python-version-file: ${{ env.PYTHON_VERSION_FILE }}
 
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
 
       - name: Cache uv
         uses: actions/cache@v4
@@ -57,7 +57,7 @@ jobs:
         with:
           python-version-file: ${{ env.PYTHON_VERSION_FILE }}
 
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
 
       - name: Cache uv
         uses: actions/cache@v4
@@ -85,7 +85,7 @@ jobs:
         with:
           python-version-file: ${{ env.PYTHON_VERSION_FILE }}
 
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
 
       - name: Cache uv
         uses: actions/cache@v4
@@ -115,7 +115,7 @@ jobs:
         with:
           python-version-file: ${{ env.PYTHON_VERSION_FILE }}
 
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
 
       - name: Cache uv
         uses: actions/cache@v4
@@ -149,7 +149,7 @@ jobs:
         with:
           python-version-file: ${{ env.PYTHON_VERSION_FILE }}
 
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
 
       - name: Cache uv
         uses: actions/cache@v4
