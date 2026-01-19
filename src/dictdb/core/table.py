@@ -630,9 +630,7 @@ class Table:
         """
         with self._lock.read_lock():
             return [
-                self.records[pk].copy()
-                for pk in self._dirty_pks
-                if pk in self.records
+                self.records[pk].copy() for pk in self._dirty_pks if pk in self.records
             ]
 
     def get_deleted_pks(self) -> List[Any]:
