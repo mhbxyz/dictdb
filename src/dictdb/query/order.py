@@ -1,7 +1,33 @@
 import heapq
-from typing import Any, Callable, List, Optional, Sequence, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 from ..core.types import Record
+
+
+class _ReverseOrder:
+    """Wrapper to invert comparison for descending sort."""
+
+    __slots__ = ("value",)
+
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+    def __lt__(self, other: "_ReverseOrder") -> bool:
+        return self.value > other.value
+
+    def __le__(self, other: "_ReverseOrder") -> bool:
+        return self.value >= other.value
+
+    def __gt__(self, other: "_ReverseOrder") -> bool:
+        return self.value < other.value
+
+    def __ge__(self, other: "_ReverseOrder") -> bool:
+        return self.value <= other.value
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, _ReverseOrder):
+            return NotImplemented
+        return self.value == other.value
 
 
 def order_records(
@@ -74,30 +100,38 @@ def order_records_with_limit(
     return _sort_records(records, order_by)
 
 
+def _parse_order_fields(order_by: Union[str, Sequence[str]]) -> List[Tuple[str, bool]]:
+    """Parse order_by into list of (field_name, descending) tuples."""
+    fields = [order_by] if isinstance(order_by, str) else list(order_by)
+    parsed: List[Tuple[str, bool]] = []
+    for field in fields:
+        if field.startswith("-"):
+            parsed.append((field[1:], True))
+        else:
+            parsed.append((field, False))
+    return parsed
+
+
 def _sort_records(
     records: List[Record], order_by: Union[str, Sequence[str]]
 ) -> List[Record]:
     """
-    Internal function to sort records by multiple fields.
+    Sort records by multiple fields in a single pass using tuple keys.
+
+    Uses _ReverseOrder wrapper for descending fields to enable single-pass sort.
+    Time complexity: O(n log n) regardless of number of fields.
 
     :param records: List of records to sort.
     :param order_by: Field name or list of field names to sort by.
     :return: Sorted list of records.
     """
-    fields = [order_by] if isinstance(order_by, str) else list(order_by)
+    parsed = _parse_order_fields(order_by)
 
-    def _make_key(field_name: str) -> Callable[[Record], Any]:
-        def _key_fn(r: Record) -> Any:
-            return r.get(field_name)
+    def _sort_key(record: Record) -> Tuple[Any, ...]:
+        key_parts: List[Any] = []
+        for fname, desc in parsed:
+            val = record.get(fname)
+            key_parts.append(_ReverseOrder(val) if desc else val)
+        return tuple(key_parts)
 
-        return _key_fn
-
-    result = list(records)
-    for field in reversed(fields):
-        desc = False
-        fname = field
-        if field.startswith("-"):
-            desc = True
-            fname = field[1:]
-        result.sort(key=_make_key(fname), reverse=desc)
-    return result
+    return sorted(records, key=_sort_key)
