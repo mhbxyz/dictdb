@@ -65,19 +65,22 @@ def order_records_with_limit(
 
     :param records: List of records to order.
     :param order_by: Field name or list of field names to sort by.
-    :param limit: Maximum number of records after offset.
-    :param offset: Number of records to skip.
+    :param limit: Maximum number of records after offset (negative treated as no limit).
+    :param offset: Number of records to skip (negative treated as 0).
     :return: Ordered list of records (may be partial if limit optimization applied).
     """
     if not order_by:
         return list(records)
 
-    # If no limit, fall back to standard sort
-    if limit is None:
+    # Normalize offset (negative treated as 0)
+    effective_offset = max(offset, 0)
+
+    # If no limit or negative limit, fall back to standard sort
+    if limit is None or limit < 0:
         return _sort_records(records, order_by)
 
     # Calculate how many records we need
-    needed = offset + limit
+    needed = effective_offset + limit
 
     # If we need all or most records, standard sort is more efficient
     if needed >= len(records):

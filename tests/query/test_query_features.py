@@ -138,3 +138,127 @@ def test_multi_field_order_by_with_limit() -> None:
     # Group B: scores 20,10 (desc) -> (B,20), (B,10)
     # First 3 should be (A,30), (A,20), (A,10)
     assert data == [("A", 30), ("A", 20), ("A", 10)]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Pagination edge cases
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "offset,expected_ids",
+    [
+        pytest.param(-1, [1, 2], id="negative_offset_treated_as_zero"),
+        pytest.param(-10, [1, 2], id="large_negative_offset_treated_as_zero"),
+        pytest.param(-100, [1, 2], id="very_large_negative_offset"),
+    ],
+)
+def test_negative_offset_treated_as_zero(
+    people: Table, offset: int, expected_ids: list[int]
+) -> None:
+    """Tests that negative offset values are treated as 0."""
+    results = people.select(order_by="id", limit=2, offset=offset)
+    ids = [r["id"] for r in results]
+    assert ids == expected_ids, f"Negative offset {offset} should be treated as 0"
+
+
+def test_limit_zero_returns_empty(people: Table) -> None:
+    """Tests that limit=0 returns an empty list."""
+    results = people.select(limit=0)
+    assert results == [], "limit=0 should return empty list"
+    assert len(results) == 0
+
+
+def test_limit_zero_with_order_by(people: Table) -> None:
+    """Tests that limit=0 with ORDER BY returns empty list."""
+    results = people.select(order_by="id", limit=0)
+    assert results == [], "limit=0 with order_by should return empty list"
+
+
+def test_limit_zero_with_offset(people: Table) -> None:
+    """Tests that limit=0 with offset returns empty list."""
+    results = people.select(limit=0, offset=2)
+    assert results == [], "limit=0 with offset should return empty list"
+
+
+def test_offset_exceeds_total_records(people: Table) -> None:
+    """Tests that offset > total records returns empty list."""
+    total = people.count()
+    results = people.select(offset=total + 10)
+    assert results == [], f"offset > total ({total}) should return empty list"
+
+
+def test_offset_equals_total_records(people: Table) -> None:
+    """Tests that offset == total records returns empty list."""
+    total = people.count()
+    results = people.select(offset=total)
+    assert results == [], f"offset == total ({total}) should return empty list"
+
+
+def test_offset_one_less_than_total(people: Table) -> None:
+    """Tests that offset = total - 1 returns last record."""
+    total = people.count()
+    results = people.select(order_by="id", offset=total - 1)
+    assert len(results) == 1, "offset = total - 1 should return 1 record"
+    assert results[0]["id"] == total, "Should return the last record"
+
+
+def test_limit_exceeds_remaining_records(people: Table) -> None:
+    """Tests that limit > remaining records returns all remaining."""
+    results = people.select(order_by="id", limit=100, offset=2)
+    # people has 4 records, offset=2 leaves 2 remaining
+    assert len(results) == 2, "Should return only remaining records"
+    ids = [r["id"] for r in results]
+    assert ids == [3, 4], "Should return records 3 and 4"
+
+
+def test_limit_negative_treated_as_no_limit(people: Table) -> None:
+    """Tests that negative limit is treated as no limit."""
+    results = people.select(order_by="id", limit=-1)
+    assert len(results) == 4, "Negative limit should return all records"
+
+
+def test_large_limit_on_small_table(people: Table) -> None:
+    """Tests that very large limit works correctly."""
+    results = people.select(limit=1000000)
+    assert len(results) == 4, "Large limit should return all available records"
+
+
+def test_pagination_with_where_clause(people: Table) -> None:
+    """Tests pagination combined with WHERE clause."""
+    # Filter to age=30 (Alice and Charlie), then paginate
+    results = people.select(
+        where=Condition(people.age == 30),
+        order_by="id",
+        limit=1,
+        offset=1,
+    )
+    assert len(results) == 1, "Should return 1 record"
+    assert results[0]["name"] == "Charlie", "Should skip Alice and return Charlie"
+
+
+def test_empty_table_pagination() -> None:
+    """Tests pagination on empty table."""
+    empty_table = Table("empty", primary_key="id")
+
+    results = empty_table.select(limit=10)
+    assert results == [], "Empty table with limit should return empty list"
+
+    results = empty_table.select(offset=5)
+    assert results == [], "Empty table with offset should return empty list"
+
+    results = empty_table.select(limit=10, offset=5)
+    assert results == [], "Empty table with limit+offset should return empty list"
+
+
+def test_pagination_order_stability() -> None:
+    """Tests that pagination with ORDER BY produces stable results."""
+    t = Table("stability", primary_key="id")
+    for i in range(10):
+        t.insert({"id": i, "value": i % 3})  # values: 0,1,2,0,1,2,0,1,2,0
+
+    # Multiple calls should return same results
+    results1 = t.select(order_by="value", limit=3, offset=0)
+    results2 = t.select(order_by="value", limit=3, offset=0)
+
+    assert results1 == results2, "Pagination should be stable across calls"
