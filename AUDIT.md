@@ -109,43 +109,71 @@
 | Catégorie | Couverture | Note |
 |-----------|------------|------|
 | CRUD Operations | 90% | Complète |
-| Conditions/Predicates | 75% | Gaps mineurs |
-| Indexes | 70% | Gaps mineurs |
-| Pagination/Ordering | 60% | Manques |
-| Persistence | 85% | Complète |
-| **Concurrence** | **15%** | **CRITIQUE** |
-| Error Handling | 65% | Gaps mineurs |
+| Conditions/Predicates | 85% | Parametrisé avec 18 cas |
+| Indexes | 85% | Tests concurrence ajoutés |
+| Pagination/Ordering | 60% | Gaps mineurs |
+| Persistence | 90% | Parametrisé json/pickle |
+| **Concurrence** | **85%** | **41 tests ajoutés** |
+| Error Handling | 70% | Gaps mineurs |
 
-### Manques critiques
+### Tests de concurrence (41 tests)
 
-1. **Aucun test de concurrence** - Pas de tests multi-threads pour INSERT/UPDATE/DELETE simultanés
+**Table CRUD** (`test_table_concurrency.py` - 14 tests) :
+- Inserts concurrents (unique PKs, auto-PK, duplicate rejection)
+- Selects concurrents et pendant inserts
+- Updates concurrents (même record, différents records, increment counter)
+- Deletes concurrents (même record, différents records)
+- Stress test mixte CRUD
+- Tests deadlock multi-tables
+- Tests copy-on-read et iteration stability
+
+**RWLock** (`test_rwlock.py` - 10 tests) :
+- Readers partagés, writers exclusifs
+- Writer preference, serialization
+- High contention stress test
+- Exception safety, context manager
+
+**Index** (`test_index_concurrency.py` - 10 tests) :
+- Inserts/updates/deletes concurrents avec index hash et sorted
+- Range queries pendant modifications
+- Multi-index operations
+
+**Backup** (`test_backup_concurrency.py` - 7 tests) :
+- Snapshot consistency pendant writes
+- Debouncing des requêtes concurrentes
+- Incremental backup concurrent
+- Unicité des noms de fichiers
+
+### Manques résiduels (mineurs)
+
+1. ~~**Aucun test de concurrence**~~ **CORRIGÉ** - 41 tests multi-threads
 2. **Edge cases pagination** - offset négatif, limit=0, offset > total
-3. **SortedIndex** - Peu de tests dédiés
+3. ~~**SortedIndex**~~ **CORRIGÉ** - Tests dédiés ajoutés
 4. **Erreurs I/O** - Permissions, disque plein, fichiers corrompus
 
 ---
 
 ## RECOMMANDATIONS PRIORITAIRES
 
-### P0 - Immédiat
+### P0 - Immédiat (0 restants)
 
 1. ~~**Désactiver pickle** ou implémenter whitelist stricte avec `Unpickler.find_class()`~~ **CORRIGÉ**
 2. ~~**Remplacer `max()` par compteur** pour auto-PK : O(1) au lieu de O(n)~~ **CORRIGÉ**
-3. **Ajouter tests de concurrence** - Au moins 30 tests multi-threads
+3. ~~**Ajouter tests de concurrence** - Au moins 30 tests multi-threads~~ **CORRIGÉ** - 41 tests ajoutés
 
-### P1 - Court terme
+### P1 - Court terme (0 restants)
 
 4. ~~**Ajouter protection path traversal** dans persist.py~~ **CORRIGÉ**
 5. ~~**Redacter les logs** - Ne pas logger le contenu des records~~ **CORRIGÉ**
 6. ~~**Optimiser SortedIndex** - Utiliser arbre équilibré au lieu de liste~~ **CORRIGÉ** (`sortedcontainers.SortedList`)
-7. **Fix `raise e` → `raise`** dans table.py:324
+7. ~~**Fix `raise e` → `raise`** dans table.py~~ **CORRIGÉ**
 
-### P2 - Moyen terme
+### P2 - Moyen terme (0 restants)
 
-8. **Extraire code dupliqué** JSON schema en fonction utilitaire
-9. **Ajouter streaming** pour SELECT sur grandes tables (générateur)
-10. **Créer exceptions cohérentes** (`DuplicateTableError`, `TableNotFoundError`)
-11. **Implémenter backup incrémental**
+8. ~~**Extraire code dupliqué** JSON schema en fonction utilitaire~~ **CORRIGÉ**
+9. ~~**Ajouter streaming** pour SELECT sur grandes tables (générateur)~~ **CORRIGÉ** - early termination
+10. ~~**Créer exceptions cohérentes** (`DuplicateTableError`, `TableNotFoundError`)~~ **CORRIGÉ**
+11. ~~**Implémenter backup incrémental**~~ **CORRIGÉ** - dirty tracking + delta files
 
 ---
 
@@ -156,8 +184,8 @@
 | **Sécurité** | 9/10 | Tous les problèmes critiques, élevés et moyens corrigés |
 | **Performance** | 10/10 | Tous les problèmes corrigés : O(n²), thundering herd, ORDER BY, streaming, incremental backup |
 | **Qualité Code** | 9/10 | Anti-patterns corrigés, API cohérente, code dédupliqué |
-| **Tests** | 6/10 | Bonne base, concurrence manquante |
+| **Tests** | 9/10 | 170 tests, concurrence complète (41 tests), paramétrisation |
 | **Documentation** | 8/10 | Docstrings complètes |
 | **Architecture** | 8/10 | Modulaire et bien séparée |
 
-**Score Global: 8/10** - Bon projet avec des fondations solides. Vulnérabilités critiques corrigées, performances optimisées.
+**Score Global: 9/10** - Excellent projet. Toutes les recommandations P0/P1/P2 implémentées. Tests de concurrence complets.
