@@ -133,7 +133,7 @@ jobs:
           uv run coverage xml
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-xml
           path: coverage.xml
@@ -167,7 +167,7 @@ jobs:
         run: uv run python -m hatchling build -t sdist -t wheel
 
       - name: Upload dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist/
