@@ -1,3 +1,5 @@
+import pytest
+
 from dictdb import Table, Condition
 
 
@@ -7,48 +9,67 @@ def test_field_equality(table: Table) -> None:
 
     :param table: A prepopulated Table fixture.
     :type table: Table
-    :return: None
-    :rtype: None
     """
-    # Wrap the predicate in Condition so it can be used safely
     condition = Condition(table.name == "Alice")
-    record = {"name": "Alice"}
-    assert condition(record) is True
-    record = {"name": "Bob"}
-    assert condition(record) is False
+    assert condition({"name": "Alice"}) is True, "Equality should match exact value"
+    assert condition({"name": "Bob"}) is False, (
+        "Equality should not match different value"
+    )
 
 
-def test_comparison_operators(table: Table) -> None:
+@pytest.mark.parametrize(
+    "age_value,op,compare_to,expected",
+    [
+        # age == 30 tests
+        pytest.param(30, "==", 30, True, id="eq_match"),
+        pytest.param(25, "==", 30, False, id="eq_no_match"),
+        pytest.param(35, "==", 30, False, id="eq_greater_no_match"),
+        # age != 30 tests
+        pytest.param(25, "!=", 30, True, id="ne_less_match"),
+        pytest.param(35, "!=", 30, True, id="ne_greater_match"),
+        pytest.param(30, "!=", 30, False, id="ne_equal_no_match"),
+        # age < 30 tests
+        pytest.param(25, "<", 30, True, id="lt_match"),
+        pytest.param(30, "<", 30, False, id="lt_equal_no_match"),
+        pytest.param(35, "<", 30, False, id="lt_greater_no_match"),
+        # age <= 30 tests
+        pytest.param(25, "<=", 30, True, id="le_less_match"),
+        pytest.param(30, "<=", 30, True, id="le_equal_match"),
+        pytest.param(35, "<=", 30, False, id="le_greater_no_match"),
+        # age > 30 tests
+        pytest.param(35, ">", 30, True, id="gt_match"),
+        pytest.param(30, ">", 30, False, id="gt_equal_no_match"),
+        pytest.param(25, ">", 30, False, id="gt_less_no_match"),
+        # age >= 30 tests
+        pytest.param(35, ">=", 30, True, id="ge_greater_match"),
+        pytest.param(30, ">=", 30, True, id="ge_equal_match"),
+        pytest.param(25, ">=", 30, False, id="ge_less_no_match"),
+    ],
+)
+def test_comparison_operators(
+    table: Table, age_value: int, op: str, compare_to: int, expected: bool
+) -> None:
     """
-    Tests all standard comparison operators (==, !=, <, <=, >, >=) on a table field.
+    Tests comparison operators (==, !=, <, <=, >, >=) on a table field.
 
     :param table: A prepopulated Table fixture.
-    :type table: Table
-    :return: None
-    :rtype: None
+    :param age_value: The value of the 'age' field in the test record.
+    :param op: The operator being tested.
+    :param compare_to: The value to compare against.
+    :param expected: The expected result of the condition.
     """
-    eq_cond = Condition(table.age == 30)
-    ne_cond = Condition(table.age != 30)
-    lt_cond = Condition(table.age < 30)
-    le_cond = Condition(table.age <= 30)
-    gt_cond = Condition(table.age > 30)
-    ge_cond = Condition(table.age >= 30)
-
-    record = {"age": 30}
-    assert eq_cond(record)
-    assert not ne_cond(record)
-    assert not lt_cond(record)
-    assert le_cond(record)
-    assert not gt_cond(record)
-    assert ge_cond(record)
-
-    record = {"age": 25}
-    assert not eq_cond(record)
-    assert ne_cond(record)
-    assert lt_cond(record)
-    assert le_cond(record)
-    assert not gt_cond(record)
-    assert not ge_cond(record)
+    conditions = {
+        "==": Condition(table.age == compare_to),
+        "!=": Condition(table.age != compare_to),
+        "<": Condition(table.age < compare_to),
+        "<=": Condition(table.age <= compare_to),
+        ">": Condition(table.age > compare_to),
+        ">=": Condition(table.age >= compare_to),
+    }
+    condition = conditions[op]
+    record = {"age": age_value}
+    result = condition(record)
+    assert result == expected, f"{age_value} {op} {compare_to} should be {expected}"
 
 
 def test_logical_operators(table: Table) -> None:

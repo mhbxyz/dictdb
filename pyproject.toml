@@ -25,3 +25,8 @@ build-backend = "hatchling.build"
 [[tool.mypy.overrides]]
 module = "sortedcontainers"
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]

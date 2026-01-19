@@ -6,9 +6,12 @@ backup system for DictDB. Tests verify both periodic and manual backup triggerin
 import time
 from pathlib import Path
 
+import pytest
+
 from dictdb import DictDB, BackupManager
 
 
+@pytest.mark.slow
 def test_manual_backup(tmp_path: Path, test_db: DictDB) -> None:
     """
     Tests that a manual backup (triggered by notify_change) creates a backup file.
@@ -29,6 +32,7 @@ def test_manual_backup(tmp_path: Path, test_db: DictDB) -> None:
     assert len(backup_files) >= 1, "Manual backup did not create a backup file."
 
 
+@pytest.mark.slow
 def test_periodic_backup(tmp_path: Path, test_db: DictDB) -> None:
     """
     Tests that the periodic backup thread creates backup files over time.
@@ -51,6 +55,7 @@ def test_periodic_backup(tmp_path: Path, test_db: DictDB) -> None:
     assert len(backup_files) >= 1, "Periodic backup did not create any backup files."
 
 
+@pytest.mark.slow
 def test_stop_backup_manager(tmp_path: Path, test_db: DictDB) -> None:
     """
     Tests that the backup manager stops its periodic backup thread properly.
@@ -72,22 +77,27 @@ def test_stop_backup_manager(tmp_path: Path, test_db: DictDB) -> None:
     assert not manager._backup_thread.is_alive(), "Backup manager thread did not stop."
 
 
-def test_backup_now_handles_failure(tmp_path: Path, log_capture: list[str]) -> None:
-    class FailingDB(DictDB):
-        def save(self, filename: str, file_format: str) -> None:  # type: ignore[override]
-            raise RuntimeError("boom")
+def test_backup_now_handles_failure(
+    tmp_path: Path, log_capture: list[str], failing_db: "DictDB"
+) -> None:
+    """
+    Tests that backup_now() handles save failures gracefully and logs them.
 
-    # Configure a capture sink via log_capture fixture
+    :param tmp_path: A temporary directory provided by pytest.
+    :param log_capture: Fixture that captures log messages.
+    :param failing_db: A DictDB instance that raises on save().
+    """
     backup_dir = tmp_path / "fail_backup"
     manager = BackupManager(
-        FailingDB(), backup_dir, backup_interval=60, file_format="json"
+        failing_db, backup_dir, backup_interval=60, file_format="json"
     )
     # Should not raise, and should log the error
     manager.backup_now()
     messages = "\n".join(log_capture)
-    assert "Backup failed (1 consecutive):" in messages
+    assert "Backup failed (1 consecutive):" in messages, "Failure should be logged"
 
 
+@pytest.mark.slow
 def test_notify_change_debouncing(tmp_path: Path, test_db: DictDB) -> None:
     """
     Tests that notify_change() skips backup if called within min_backup_interval.
@@ -144,15 +154,13 @@ def test_backup_creates_unique_filenames(tmp_path: Path, test_db: DictDB) -> Non
     assert len(backup_files) == 5, "Each backup_now() should create a unique file."
 
 
-def test_backup_failure_callback(tmp_path: Path) -> None:
+def test_backup_failure_callback(tmp_path: Path, failing_db: "DictDB") -> None:
     """
     Tests that the on_backup_failure callback is invoked with exception and failure count.
+
+    :param tmp_path: A temporary directory provided by pytest.
+    :param failing_db: A DictDB instance that raises on save().
     """
-
-    class FailingDB(DictDB):
-        def save(self, filename: str, file_format: str) -> None:  # type: ignore[override]
-            raise RuntimeError("boom")
-
     failures: list[tuple[Exception, int]] = []
 
     def on_failure(exc: Exception, count: int) -> None:
@@ -160,7 +168,7 @@ def test_backup_failure_callback(tmp_path: Path) -> None:
 
     backup_dir = tmp_path / "callback_backup"
     manager = BackupManager(
-        FailingDB(),
+        failing_db,
         backup_dir,
         backup_interval=60,
         file_format="json",
@@ -176,7 +184,7 @@ def test_backup_failure_callback(tmp_path: Path) -> None:
     assert failures[0][1] == 1, "First failure count should be 1."
     assert failures[1][1] == 2, "Second failure count should be 2."
     assert failures[2][1] == 3, "Third failure count should be 3."
-    assert manager.consecutive_failures == 3
+    assert manager.consecutive_failures == 3, "Consecutive failures should be 3."
 
 
 def test_backup_success_resets_failure_count(tmp_path: Path, test_db: DictDB) -> None:

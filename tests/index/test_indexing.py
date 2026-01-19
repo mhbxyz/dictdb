@@ -20,15 +20,15 @@ def test_index_creation(indexed_table: Table) -> None:
     if hasattr(index, "index"):
         # HashIndex: verify internal mapping.
         idx_data: Dict[Any, Any] = index.index
-        assert 30 in idx_data and 25 in idx_data
-        assert len(idx_data[30]) == 2
-        assert len(idx_data[25]) == 1
+        assert 30 in idx_data and 25 in idx_data, "Index should contain ages 30 and 25"
+        assert len(idx_data[30]) == 2, "Age 30 should have 2 records (Alice, Charlie)"
+        assert len(idx_data[25]) == 1, "Age 25 should have 1 record (Bob)"
     else:
         # SortedIndex: use search method.
         result_30 = index.search(30)
         result_25 = index.search(25)
-        assert len(result_30) == 2
-        assert len(result_25) == 1
+        assert len(result_30) == 2, "SortedIndex search for 30 should find 2 records"
+        assert len(result_25) == 1, "SortedIndex search for 25 should find 1 record"
 
 
 def test_insert_updates_index(indexed_table: Table) -> None:
@@ -38,10 +38,12 @@ def test_insert_updates_index(indexed_table: Table) -> None:
     indexed_table.insert({"id": 4, "name": "David", "age": 25})
     index = indexed_table.indexes["age"]
     if hasattr(index, "index"):
-        assert len(index.index[25]) == 2
+        assert len(index.index[25]) == 2, (
+            "Index should reflect new insert (2 records at age 25)"
+        )
     else:
         result = index.search(25)
-        assert len(result) == 2
+        assert len(result) == 2, "SortedIndex should reflect new insert"
 
 
 def test_update_updates_index(indexed_table: Table) -> None:
@@ -52,17 +54,17 @@ def test_update_updates_index(indexed_table: Table) -> None:
     updated = indexed_table.update(
         {"age": 30}, where=Condition(indexed_table.name == "Bob")
     )
-    assert updated == 1
+    assert updated == 1, "UPDATE should affect exactly 1 record"
     index = indexed_table.indexes["age"]
     if hasattr(index, "index"):
         # For a hash index, key 25 should be removed.
-        assert 25 not in index.index
-        assert len(index.index[30]) == 3
+        assert 25 not in index.index, "Age 25 should be removed from index after update"
+        assert len(index.index[30]) == 3, "Age 30 should now have 3 records"
     else:
         result_25 = index.search(25)
         result_30 = index.search(30)
-        assert len(result_25) == 0
-        assert len(result_30) == 3
+        assert len(result_25) == 0, "No records should remain at age 25"
+        assert len(result_30) == 3, "Age 30 should now have 3 records"
 
 
 def test_delete_updates_index(indexed_table: Table) -> None:
@@ -71,14 +73,16 @@ def test_delete_updates_index(indexed_table: Table) -> None:
     """
     # Delete record for Alice (age 30).
     deleted = indexed_table.delete(where=Condition(indexed_table.name == "Alice"))
-    assert deleted == 1
+    assert deleted == 1, "DELETE should affect exactly 1 record"
     index = indexed_table.indexes["age"]
     if hasattr(index, "index"):
         # For hash index, age 30 should have one record (Charlie remains).
-        assert 30 in index.index and len(index.index[30]) == 1
+        assert 30 in index.index and len(index.index[30]) == 1, (
+            "Age 30 should have 1 record remaining (Charlie)"
+        )
     else:
         result = index.search(30)
-        assert len(result) == 1
+        assert len(result) == 1, "SortedIndex should have 1 record at age 30"
 
 
 def test_select_uses_index(indexed_table: Table) -> None:
@@ -133,8 +137,10 @@ def test_is_in_uses_index() -> None:
     # is_in should use the index
     results = table.select(where=Condition(table.category.is_in(["cat_0", "cat_1"])))
     categories = {r["category"] for r in results}
-    assert categories == {"cat_0", "cat_1"}
-    assert len(results) == 8  # 4 records per category
+    assert categories == {"cat_0", "cat_1"}, (
+        "is_in should return only specified categories"
+    )
+    assert len(results) == 8, "Expected 8 records (4 per category)"
 
 
 def test_and_condition_uses_index() -> None:

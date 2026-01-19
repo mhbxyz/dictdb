@@ -8,116 +8,75 @@ Tests are conducted for both JSON and pickle formats.
 from pathlib import Path
 import asyncio
 
+import pytest
+
 from dictdb import DictDB
 
 
-def test_save_load_json(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "file_format,extension",
+    [
+        pytest.param("json", "json", id="json_format"),
+        pytest.param("pickle", "pkl", id="pickle_format"),
+    ],
+)
+def test_save_load(tmp_path: Path, file_format: str, extension: str) -> None:
     """
-    Tests saving and loading the DictDB using JSON format.
+    Tests saving and loading the DictDB using specified format.
 
     :param tmp_path: A temporary directory provided by pytest.
-    :type tmp_path: Path
-    :return: None
-    :rtype: None
+    :param file_format: The serialization format ('json' or 'pickle').
+    :param extension: The file extension for the format.
     """
     db = DictDB()
-    # Create a table and insert a record.
     db.create_table("test")
     table = db.get_table("test")
     table.insert({"id": 1, "name": "Alice", "age": 30})
 
-    # Save the database to a JSON file.
-    file_json = tmp_path / "db.json"
-    db.save(str(file_json), "json")
+    file_path = tmp_path / f"db.{extension}"
+    db.save(str(file_path), file_format)
 
-    # Load a new database instance from the JSON file.
-    loaded_db = DictDB.load(str(file_json), "json")
+    loaded_db = DictDB.load(str(file_path), file_format)
     loaded_table = loaded_db.get_table("test")
     records = loaded_table.select()
 
-    assert len(records) == 1
-    assert records[0]["name"] == "Alice"
-    assert records[0]["age"] == 30
+    assert len(records) == 1, f"Expected 1 record after loading {file_format}"
+    assert records[0]["name"] == "Alice", f"Name mismatch after loading {file_format}"
+    assert records[0]["age"] == 30, f"Age mismatch after loading {file_format}"
 
 
-def test_save_load_pickle(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "file_format,extension",
+    [
+        pytest.param("json", "json", id="async_json_format"),
+        pytest.param("pickle", "pkl", id="async_pickle_format"),
+    ],
+)
+def test_async_save_load(tmp_path: Path, file_format: str, extension: str) -> None:
     """
-    Tests saving and loading the DictDB using pickle format.
+    Tests asynchronously saving and loading the DictDB using specified format.
 
     :param tmp_path: A temporary directory provided by pytest.
-    :type tmp_path: Path
-    :return: None
-    :rtype: None
-    """
-    db = DictDB()
-    db.create_table("sample")
-    table = db.get_table("sample")
-    table.insert({"id": 1, "name": "Bob", "age": 25})
-
-    # Save the database to a pickle file.
-    file_pickle = tmp_path / "db.pkl"
-    db.save(str(file_pickle), "pickle")
-
-    # Load the database from the pickle file.
-    loaded_db = DictDB.load(str(file_pickle), "pickle")
-    loaded_table = loaded_db.get_table("sample")
-    records = loaded_table.select()
-
-    assert len(records) == 1
-    assert records[0]["name"] == "Bob"
-    assert records[0]["age"] == 25
-
-
-def test_async_save_load_json(tmp_path: Path) -> None:
-    """
-    Tests asynchronously saving and loading the DictDB using JSON format.
-
-    :param tmp_path: A temporary directory provided by pytest.
-    :type tmp_path: Path
-    :return: None
-    :rtype: None
+    :param file_format: The serialization format ('json' or 'pickle').
+    :param extension: The file extension for the format.
     """
     db = DictDB()
     db.create_table("test_async")
     table = db.get_table("test_async")
-    table.insert({"id": 1, "name": "Alice", "age": 30})
+    table.insert({"id": 1, "name": "Bob", "age": 25})
 
-    file_json = tmp_path / "async_db.json"
-    asyncio.run(db.async_save(str(file_json), "json"))
+    file_path = tmp_path / f"async_db.{extension}"
+    asyncio.run(db.async_save(str(file_path), file_format))
 
-    loaded_db = asyncio.run(DictDB.async_load(str(file_json), "json"))
+    loaded_db = asyncio.run(DictDB.async_load(str(file_path), file_format))
     loaded_table = loaded_db.get_table("test_async")
     records = loaded_table.select()
 
-    assert len(records) == 1
-    assert records[0]["name"] == "Alice"
-    assert records[0]["age"] == 30
-
-
-def test_async_save_load_pickle(tmp_path: Path) -> None:
-    """
-    Tests asynchronously saving and loading the DictDB using pickle format.
-
-    :param tmp_path: A temporary directory provided by pytest.
-    :type tmp_path: Path
-    :return: None
-    :rtype: None
-    """
-    db = DictDB()
-    db.create_table("sample_async")
-    table = db.get_table("sample_async")
-    table.insert({"id": 1, "name": "Bob", "age": 25})
-
-    file_pickle = tmp_path / "async_db.pkl"
-    asyncio.run(db.async_save(str(file_pickle), "pickle"))
-
-    loaded_db = asyncio.run(DictDB.async_load(str(file_pickle), "pickle"))
-    loaded_table = loaded_db.get_table("sample_async")
-    records = loaded_table.select()
-
-    assert len(records) == 1
-    assert records[0]["name"] == "Bob"
-    assert records[0]["age"] == 25
+    assert len(records) == 1, f"Expected 1 record after async loading {file_format}"
+    assert records[0]["name"] == "Bob", (
+        f"Name mismatch after async loading {file_format}"
+    )
+    assert records[0]["age"] == 25, f"Age mismatch after async loading {file_format}"
 
 
 def test_multiple_save_load_cycles(tmp_path: Path) -> None:

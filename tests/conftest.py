@@ -98,3 +98,38 @@ def indexed_table(request: FixtureRequest) -> Table:
     table.insert({"id": 3, "name": "Charlie", "age": 30})
     table.create_index("age", index_type=request.param)
     return table
+
+
+@pytest.fixture
+def people_table() -> Table:
+    """
+    Returns a Table instance named 'people' with a schema and prepopulated records.
+    Useful for tests that need a standard table setup.
+
+    :return: A prepopulated Table instance with 3 records.
+    """
+    table = Table(
+        "people", primary_key="id", schema={"id": int, "name": str, "age": int}
+    )
+    table.insert({"id": 1, "name": "Alice", "age": 30})
+    table.insert({"id": 2, "name": "Bob", "age": 25})
+    table.insert({"id": 3, "name": "Charlie", "age": 30})
+    return table
+
+
+class FailingDB(DictDB):
+    """A DictDB subclass that raises RuntimeError on save() for testing failure handling."""
+
+    def save(self, filename: str, file_format: str) -> None:  # type: ignore[override]
+        raise RuntimeError("Simulated save failure")
+
+
+@pytest.fixture
+def failing_db() -> FailingDB:
+    """
+    Returns a FailingDB instance that always raises RuntimeError on save().
+    Useful for testing error handling in backup operations.
+
+    :return: A FailingDB instance.
+    """
+    return FailingDB()

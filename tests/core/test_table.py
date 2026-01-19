@@ -156,57 +156,55 @@ def test_delete_no_match(table: Table) -> None:
         table.delete(where=Condition(table.name == "Nonexistent"))
 
 
-def test_insert_valid_record_with_schema() -> None:
+@pytest.mark.parametrize(
+    "record,should_raise,error_desc",
+    [
+        pytest.param(
+            {"id": 1, "name": "Alice", "age": 30},
+            False,
+            "valid record",
+            id="valid_record",
+        ),
+        pytest.param(
+            {"id": 1, "name": "Alice"},
+            True,
+            "missing required field 'age'",
+            id="missing_field",
+        ),
+        pytest.param(
+            {"id": 1, "name": "Alice", "age": 30, "extra": "value"},
+            True,
+            "extra field not in schema",
+            id="extra_field",
+        ),
+        pytest.param(
+            {"id": 1, "name": "Alice", "age": "30"},
+            True,
+            "wrong type for 'age' (str instead of int)",
+            id="wrong_type",
+        ),
+    ],
+)
+def test_schema_validation(
+    record: Dict[str, Any], should_raise: bool, error_desc: str
+) -> None:
     """
-    Tests inserting a valid record into a table with a defined schema.
+    Tests schema validation for various record scenarios.
 
-    :return: None
-    :rtype: None
-    """
-    schema = {"id": int, "name": str, "age": int}
-    table = Table("schema_table", primary_key="id", schema=schema)
-    table.insert({"id": 1, "name": "Alice", "age": 30})
-    records = table.select()
-    assert len(records) == 1
-
-
-def test_insert_missing_field_in_schema() -> None:
-    """
-    Tests that inserting a record missing a field defined in the schema raises SchemaValidationError.
-
-    :return: None
-    :rtype: None
-    """
-    schema = {"id": int, "name": str, "age": int}
-    table = Table("schema_table", primary_key="id", schema=schema)
-    with pytest.raises(SchemaValidationError):
-        table.insert({"id": 1, "name": "Alice"})  # Missing 'age'
-
-
-def test_insert_extra_field_not_in_schema() -> None:
-    """
-    Tests that inserting a record containing extra fields not defined in the schema raises SchemaValidationError.
-
-    :return: None
-    :rtype: None
-    """
-    schema = {"id": int, "name": str, "age": int}
-    table = Table("schema_table", primary_key="id", schema=schema)
-    with pytest.raises(SchemaValidationError):
-        table.insert({"id": 1, "name": "Alice", "age": 30, "extra": "value"})
-
-
-def test_insert_wrong_type_field_in_schema() -> None:
-    """
-    Tests that inserting a record with a field of the wrong type raises SchemaValidationError.
-
-    :return: None
-    :rtype: None
+    :param record: The record to insert.
+    :param should_raise: Whether SchemaValidationError should be raised.
+    :param error_desc: Description of the test case.
     """
     schema = {"id": int, "name": str, "age": int}
     table = Table("schema_table", primary_key="id", schema=schema)
-    with pytest.raises(SchemaValidationError):
-        table.insert({"id": 1, "name": "Alice", "age": "30"})  # 'age' should be int
+
+    if should_raise:
+        with pytest.raises(SchemaValidationError, match=r".*"):
+            table.insert(record)
+    else:
+        table.insert(record)
+        records = table.select()
+        assert len(records) == 1, f"Expected 1 record for {error_desc}"
 
 
 def test_auto_assign_primary_key_with_schema() -> None:
