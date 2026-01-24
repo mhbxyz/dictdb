@@ -64,4 +64,5 @@ markers = [
 [tool.bandit]
 exclude_dirs = ["tests", "benchmarks"]
 # B403: pickle is an intentional feature for persistence
-skips = ["B403"]
+# B101: assert is used for internal invariants in data structures
+skips = ["B403", "B101"]
