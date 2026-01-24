@@ -48,7 +48,9 @@ class TestOptionalCondition:
 
     def test_select_or_without_wrapper(self, table: Table) -> None:
         """Test OR conditions without Condition wrapper."""
-        results = table.select(where=(table.department == "IT") | (table.department == "HR"))
+        results = table.select(
+            where=(table.department == "IT") | (table.department == "HR")
+        )
         assert len(results) == 3
 
     def test_select_not_without_wrapper(self, table: Table) -> None:
@@ -84,7 +86,9 @@ class TestOptionalCondition:
 
     def test_update_without_condition_wrapper(self, table: Table) -> None:
         """Test update with PredicateExpr directly."""
-        count = table.update({"department": "Engineering"}, where=table.department == "IT")
+        count = table.update(
+            {"department": "Engineering"}, where=table.department == "IT"
+        )
         assert count == 2
         results = table.select(where=table.department == "Engineering")
         assert len(results) == 2
@@ -114,11 +118,15 @@ class TestOptionalCondition:
     def test_aggregate_without_condition_wrapper(self, table: Table) -> None:
         """Test aggregate with PredicateExpr directly."""
         result = table.aggregate(where=table.department == "IT", count=Count())
+        assert isinstance(result, dict)
         assert result["count"] == 2
 
     def test_aggregate_with_condition_wrapper(self, table: Table) -> None:
         """Test aggregate with Condition wrapper still works."""
-        result = table.aggregate(where=Condition(table.department == "IT"), count=Count())
+        result = table.aggregate(
+            where=Condition(table.department == "IT"), count=Count()
+        )
+        assert isinstance(result, dict)
         assert result["count"] == 2
 
     # --- Error handling ---

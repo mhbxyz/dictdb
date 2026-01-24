@@ -32,23 +32,23 @@ class TestLogicalFunctions:
 
     def test_and_three_conditions(self, table: Table) -> None:
         """Test And with three conditions."""
-        results = table.select(where=And(
-            table.dept == "IT",
-            table.active == True,
-            table.age >= 35
-        ))
+        results = table.select(
+            where=And(table.dept == "IT", table.active == True, table.age >= 35)
+        )
         assert len(results) == 1
         assert results[0]["name"] == "Eve"
 
     def test_and_many_conditions(self, table: Table) -> None:
         """Test And with many conditions."""
-        results = table.select(where=And(
-            table.dept == "IT",
-            table.active == True,
-            table.age >= 30,
-            table.age <= 40,
-            table.name.startswith("A")
-        ))
+        results = table.select(
+            where=And(
+                table.dept == "IT",
+                table.active == True,
+                table.age >= 30,
+                table.age <= 40,
+                table.name.startswith("A"),
+            )
+        )
         assert len(results) == 1
         assert results[0]["name"] == "Alice"
 
@@ -76,11 +76,9 @@ class TestLogicalFunctions:
 
     def test_or_three_conditions(self, table: Table) -> None:
         """Test Or with three conditions."""
-        results = table.select(where=Or(
-            table.name == "Alice",
-            table.name == "Bob",
-            table.name == "Diana"
-        ))
+        results = table.select(
+            where=Or(table.name == "Alice", table.name == "Bob", table.name == "Diana")
+        )
         assert len(results) == 3
 
     def test_or_one_match(self, table: Table) -> None:
@@ -125,57 +123,52 @@ class TestLogicalFunctions:
 
     def test_and_or_combined(self, table: Table) -> None:
         """Test And containing Or."""
-        results = table.select(where=And(
-            Or(table.dept == "IT", table.dept == "HR"),
-            table.active == True
-        ))
+        results = table.select(
+            where=And(Or(table.dept == "IT", table.dept == "HR"), table.active == True)
+        )
         assert len(results) == 3
         names = {r["name"] for r in results}
         assert names == {"Alice", "Bob", "Eve"}
 
     def test_or_and_combined(self, table: Table) -> None:
         """Test Or containing And."""
-        results = table.select(where=Or(
-            And(table.dept == "IT", table.age >= 35),
-            table.dept == "Sales"
-        ))
+        results = table.select(
+            where=Or(And(table.dept == "IT", table.age >= 35), table.dept == "Sales")
+        )
         assert len(results) == 3
         names = {r["name"] for r in results}
         assert names == {"Charlie", "Diana", "Eve"}
 
     def test_and_with_not(self, table: Table) -> None:
         """Test And with Not."""
-        results = table.select(where=And(
-            table.dept == "IT",
-            Not(table.active == False)
-        ))
+        results = table.select(
+            where=And(table.dept == "IT", Not(table.active == False))
+        )
         assert len(results) == 2
         names = {r["name"] for r in results}
         assert names == {"Alice", "Eve"}
 
     def test_complex_nested(self, table: Table) -> None:
         """Test complex nested logical operations."""
-        results = table.select(where=And(
-            Or(table.dept == "IT", table.dept == "Sales"),
-            table.age >= 28,
-            Not(table.active == False)
-        ))
+        results = table.select(
+            where=And(
+                Or(table.dept == "IT", table.dept == "Sales"),
+                table.age >= 28,
+                Not(table.active == False),
+            )
+        )
         assert len(results) == 3
         names = {r["name"] for r in results}
         assert names == {"Alice", "Diana", "Eve"}
 
     def test_deeply_nested(self, table: Table) -> None:
         """Test deeply nested logical operations."""
-        results = table.select(where=Or(
-            And(
-                table.dept == "IT",
-                Or(table.age < 32, table.age > 38)
-            ),
-            And(
-                table.dept == "Sales",
-                table.active == True
+        results = table.select(
+            where=Or(
+                And(table.dept == "IT", Or(table.age < 32, table.age > 38)),
+                And(table.dept == "Sales", table.active == True),
             )
-        ))
+        )
         assert len(results) == 3
         names = {r["name"] for r in results}
         assert names == {"Alice", "Diana", "Eve"}
@@ -229,7 +222,9 @@ class TestLogicalFunctions:
 
     def test_and_in_update(self, table: Table) -> None:
         """Test And works in update."""
-        count = table.update({"active": False}, where=And(table.dept == "IT", table.age < 35))
+        count = table.update(
+            {"active": False}, where=And(table.dept == "IT", table.age < 35)
+        )
         assert count == 1
         alice = table.select(where=table.name == "Alice")[0]
         assert alice["active"] is False
