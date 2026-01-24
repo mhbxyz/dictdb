@@ -115,3 +115,14 @@ class SortedIndex(IndexBase):
         :return: A set of primary keys with indexed values >= value.
         """
         return {pk for _, pk in self._tree.iter_gte(value)}
+
+    def search_between(self, low: Any, high: Any) -> Set[Any]:
+        """Search for records with values in the inclusive range [low, high].
+
+        Time complexity: O(log n + k) where k is the number of matches.
+
+        :param low: The lower bound (inclusive).
+        :param high: The upper bound (inclusive).
+        :return: A set of primary keys with indexed values in [low, high].
+        """
+        return {pk for _, pk in self._tree.iter_between(low, high)}

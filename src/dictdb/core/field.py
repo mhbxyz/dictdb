@@ -58,6 +58,28 @@ class _IsInCondition:
         return record.get(self.field) in self.values
 
 
+class _BetweenCondition:
+    """
+    A callable class representing a 'between' condition on a field.
+
+    Checks if a field value is within an inclusive range [low, high].
+    """
+
+    def __init__(self, field: str, low: Any, high: Any) -> None:
+        self.field: str = field
+        self.low: Any = low
+        self.high: Any = high
+
+    def __call__(self, record: Dict[str, Any]) -> bool:
+        val = record.get(self.field)
+        if val is None:
+            return False
+        try:
+            return bool(self.low <= val <= self.high)
+        except TypeError:
+            return False
+
+
 class Field:
     """
     Represents a field (column) in a table and overloads comparison operators
@@ -193,3 +215,22 @@ class Field:
     def is_not_null(self) -> PredicateExpr:
         """Check if the field value is not None and the field exists."""
         return PredicateExpr(lambda rec: rec.get(self.name) is not None)
+
+    def between(self, low: Any, high: Any) -> PredicateExpr:
+        """
+        Create a range condition (low <= field <= high).
+
+        Checks if the field value is within the inclusive range [low, high].
+        This is equivalent to ``(field >= low) & (field <= high)`` but may
+        be optimized to use a single index scan when a sorted index exists.
+
+        :param low: The lower bound (inclusive).
+        :param high: The upper bound (inclusive).
+        :return: A PredicateExpr that matches records where field is in range.
+
+        Example::
+
+            # Find users aged 18 to 65
+            users.select(where=Condition(users.age.between(18, 65)))
+        """
+        return PredicateExpr(_BetweenCondition(self.name, low, high))

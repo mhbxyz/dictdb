@@ -288,6 +288,7 @@ table.field >= value    # Greater than or equal
 
 ```python
 table.field.is_in([v1, v2, v3])  # IN operator
+table.field.between(low, high)   # Inclusive range (low <= field <= high)
 table.field.startswith("prefix") # String prefix
 table.field.endswith("suffix")   # String suffix
 table.field.contains("substr")   # String contains

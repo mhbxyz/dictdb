@@ -36,7 +36,7 @@ from ..index import IndexBase
 from ..index.registry import create as create_index
 from ..obs.logging import logger
 from .types import Record, Schema
-from .field import Field, _FieldCondition, _IsInCondition
+from .field import Field, _FieldCondition, _IsInCondition, _BetweenCondition
 from .rwlock import RWLock
 
 
@@ -225,6 +225,20 @@ class Table:
         if isinstance(func, _IsInCondition):
             if func.field in self.indexes:
                 return self.indexes[func.field].search_multi(func.values)
+            return None
+
+        # Handle between conditions
+        if isinstance(func, _BetweenCondition):
+            if func.field in self.indexes:
+                index = self.indexes[func.field]
+                if index.supports_range and hasattr(index, "search_between"):
+                    result: set[Any] = index.search_between(func.low, func.high)
+                    return result
+                # Fallback: intersection of gte and lte
+                if index.supports_range:
+                    gte_pks = index.search_gte(func.low)
+                    lte_pks = index.search_lte(func.high)
+                    return gte_pks & lte_pks
             return None
 
         # Handle compound AND conditions (lambda with closure)

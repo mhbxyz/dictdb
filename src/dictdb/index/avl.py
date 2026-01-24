@@ -86,6 +86,18 @@ class AVLTree:
         """Iterate over all elements with value == given value."""
         yield from self._iter_eq(self._root, value)
 
+    def iter_between(
+        self, low: Any, high: Any, inclusive: bool = True
+    ) -> Iterator[tuple[Any, Any]]:
+        """Iterate over all elements with value in range [low, high] (inclusive).
+
+        :param low: The lower bound of the range.
+        :param high: The upper bound of the range.
+        :param inclusive: If True, includes both bounds. Default True.
+        :return: Iterator of (value, pk) tuples in the range.
+        """
+        yield from self._iter_between(self._root, low, high, inclusive)
+
     # --- Internal methods ---
 
     def _height(self, node: Optional[AVLNode]) -> int:
@@ -295,3 +307,29 @@ class AVLTree:
             yield from self._iter_eq(node.right, value)
         else:
             yield from self._iter_eq(node.left, value)
+
+    def _iter_between(
+        self, node: Optional[AVLNode], low: Any, high: Any, inclusive: bool
+    ) -> Iterator[tuple[Any, Any]]:
+        """Yield all elements with value in range [low, high]."""
+        if node is None:
+            return
+
+        node_value = node.key[0]
+
+        # Check if we should traverse left subtree
+        if (inclusive and node_value >= low) or (not inclusive and node_value > low):
+            yield from self._iter_between(node.left, low, high, inclusive)
+
+        # Check if current node is in range
+        if inclusive:
+            in_range = low <= node_value <= high
+        else:
+            in_range = low < node_value < high
+
+        if in_range:
+            yield node.key
+
+        # Check if we should traverse right subtree
+        if (inclusive and node_value <= high) or (not inclusive and node_value < high):
+            yield from self._iter_between(node.right, low, high, inclusive)

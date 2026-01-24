@@ -75,6 +75,25 @@ Condition(employees.department.is_in(["IT", "Engineering", "Data"]))
 # Equivalent to multiple OR conditions but more efficient
 ```
 
+## BETWEEN Operator
+
+Check if a field value is within an inclusive range:
+
+```python
+# Match values in range [30, 50]
+Condition(employees.age.between(30, 50))
+
+# Equivalent to (but more efficient than):
+Condition((employees.age >= 30) & (employees.age <= 50))
+
+# Works with any comparable types
+Condition(employees.hire_date.between("2020-01-01", "2023-12-31"))
+Condition(employees.salary.between(50000, 100000))
+```
+
+!!! tip "Index Optimization"
+    When a sorted index exists on the field, `between()` uses an optimized single range scan instead of two separate index lookups.
+
 ## Null Checks
 
 Check for null (None) or missing field values:
