@@ -7,6 +7,7 @@ repo_name: mhbxyz/dictdb
 theme:
   name: material
   favicon: assets/logo.png
+  language: en
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -23,7 +24,6 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
-    - navigation.instant
     - navigation.tracking
     - navigation.sections
     - navigation.expand
@@ -35,6 +35,41 @@ theme:
 
 plugins:
   - search
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: fr
+          name: Français
+          build: true
+          nav_translations:
+            Home: Accueil
+            Getting Started: Premiers pas
+            Guides: Guides
+            Query DSL: DSL de requêtes
+            Indexes: Index
+            Schemas: Schémas
+            Aggregations: Agrégations
+            CSV Import/Export: Import/Export CSV
+            Persistence: Persistance
+            Backups: Sauvegardes
+            Concurrency: Concurrence
+            Logging: Journalisation
+            Examples: Exemples
+            Overview: Vue d'ensemble
+            My First Contact Book: Mon premier carnet de contacts
+            The Neighborhood Library: La bibliothèque de quartier
+            My Online Store: Ma boutique en ligne
+            The Sales Manager's Dashboard: Le tableau de bord du directeur commercial
+            Legacy Data Migration: Migration de données legacy
+            Production Ready: Prêt pour la production
+            API Reference: Référence API
 
 markdown_extensions:
   - admonition
