@@ -1,3 +1,21 @@
+"""
+Multi-table database orchestration for DictDB.
+
+This module provides the :class:`DictDB` class, which serves as the main entry
+point for managing an in-memory database with multiple tables. It handles
+table creation, deletion, retrieval, and persistence operations.
+
+Example::
+
+    from dictdb.storage.database import DictDB
+
+    db = DictDB()
+    db.create_table("users", primary_key="id")
+    users = db.get_table("users")
+    users.insert({"name": "Alice", "age": 30})
+    db.save("backup.json", "json")
+"""
+
 import asyncio
 from pathlib import Path
 from typing import Dict, List, Union

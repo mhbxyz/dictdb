@@ -1,3 +1,16 @@
+"""
+Core type aliases and schema utilities for DictDB.
+
+This module defines the fundamental type aliases used throughout the library:
+
+- ``Record``: A dictionary representing a single database record.
+- ``Schema``: A dictionary mapping field names to Python types.
+- ``Predicate``: A callable that filters records by returning True/False.
+
+It also provides utilities for serializing and deserializing schema types
+when persisting tables to JSON format.
+"""
+
 from typing import Any, Dict, Callable, Type
 
 __all__ = [

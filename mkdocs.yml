@@ -63,4 +63,5 @@ nav:
       - Backups: guides/backups.md
       - Logging: guides/logging.md
       - Concurrency: guides/concurrency.md
+      - Aggregations: guides/aggregations.md
   - API Reference: api.md

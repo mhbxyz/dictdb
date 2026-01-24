@@ -1,3 +1,28 @@
+"""
+Table class providing SQL-like CRUD operations for in-memory data.
+
+The Table class is the primary data structure in DictDB, representing a
+collection of records (dictionaries) with optional schema validation,
+indexing for accelerated queries, and thread-safe concurrent access.
+
+Key features:
+
+- **CRUD Operations**: insert, select, update, delete, upsert
+- **Query DSL**: Build conditions via attribute access (e.g., ``table.age >= 18``)
+- **Indexing**: Create hash or sorted indexes for O(1) or O(log n) lookups
+- **Concurrency**: Reader-writer lock ensures thread-safe operations
+- **Aggregations**: Support for Count, Sum, Avg, Min, Max with optional grouping
+- **Change Tracking**: Dirty/deleted tracking for incremental backups
+
+Example::
+
+    from dictdb import Table, Condition
+
+    users = Table("users", schema={"id": int, "name": str, "age": int})
+    users.insert({"name": "Alice", "age": 30})
+    adults = users.select(where=Condition(users.age >= 18))
+"""
+
 import operator
 from typing import Any, Literal, Optional, Dict, List, overload, Tuple, Union
 

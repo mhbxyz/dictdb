@@ -1,3 +1,31 @@
+"""
+Persistence layer for DictDB database serialization and deserialization.
+
+This module provides functions to save and load DictDB instances to/from files
+using JSON or pickle formats. It includes security measures for pickle
+deserialization via a restricted unpickler that only allows whitelisted classes.
+
+Security Features:
+    - :class:`_RestrictedUnpickler` prevents arbitrary code execution from
+      malicious pickle files by whitelisting only safe classes.
+    - Path validation ensures files are within allowed directories.
+
+Supported Formats:
+    - **JSON**: Human-readable, cross-platform compatible, uses streaming for
+      memory efficiency.
+    - **Pickle**: Python-native binary format, faster but requires security
+      precautions.
+
+Example::
+
+    from dictdb.storage.persist import save, load
+    from dictdb.storage.database import DictDB
+
+    db = DictDB()
+    save(db, "backup.json", "json")
+    restored = load("backup.json", "json")
+"""
+
 from __future__ import annotations
 
 import json
@@ -120,6 +148,18 @@ def save(
     file_format: str,
     allowed_dir: Optional[Path] = None,
 ) -> None:
+    """
+    Save a DictDB instance to a file.
+
+    :param db: The DictDB instance to save.
+    :param filename: Path to the output file.
+    :param file_format: Format to use: ``"json"`` for human-readable JSON or
+        ``"pickle"`` for Python binary serialization.
+    :param allowed_dir: If provided, validates that the file path is within
+        this directory to prevent path traversal attacks.
+    :raises ValueError: If ``file_format`` is not ``"json"`` or ``"pickle"``,
+        or if ``filename`` is outside ``allowed_dir``.
+    """
     validated_path = _validate_path(filename, allowed_dir)
     file_format = file_format.lower()
 
@@ -141,6 +181,21 @@ def load(
     file_format: str,
     allowed_dir: Optional[Path] = None,
 ) -> DictDB:
+    """
+    Load a DictDB instance from a file.
+
+    For pickle files, uses :class:`_RestrictedUnpickler` to prevent arbitrary
+    code execution from malicious files.
+
+    :param filename: Path to the file to load.
+    :param file_format: Format of the file: ``"json"`` or ``"pickle"``.
+    :param allowed_dir: If provided, validates that the file path is within
+        this directory to prevent path traversal attacks.
+    :return: A reconstructed DictDB instance.
+    :raises ValueError: If ``file_format`` is not ``"json"`` or ``"pickle"``,
+        or if ``filename`` is outside ``allowed_dir``.
+    :raises pickle.UnpicklingError: If a pickle file contains disallowed classes.
+    """
     validated_path = _validate_path(filename, allowed_dir)
     file_format = file_format.lower()
 

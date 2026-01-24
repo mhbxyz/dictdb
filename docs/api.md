@@ -21,7 +21,7 @@ Creates an empty database instance.
 #### create_table
 
 ```python
-db.create_table(table_name: str, primary_key: str = "id", schema: dict = None) -> None
+db.create_table(table_name: str, primary_key: str = "id") -> None
 ```
 
 Creates a new table.
@@ -30,7 +30,8 @@ Creates a new table.
 |-----------|------|---------|-------------|
 | `table_name` | `str` | - | Name of the table |
 | `primary_key` | `str` | `"id"` | Field to use as primary key |
-| `schema` | `dict` | `None` | Optional schema for validation |
+
+**Note:** To use schema validation, create a `Table` directly with the `schema` parameter and register it via `db.tables[name] = table`.
 
 **Raises:** `DuplicateTableError` if table exists.
 
@@ -111,17 +112,48 @@ Represents a single table with CRUD operations.
 
 ```python
 table.insert(record: dict) -> Any
+table.insert(record: list[dict], batch_size: int = None, skip_validation: bool = False) -> list[Any]
 ```
 
-Inserts a record, returns the primary key.
+Inserts one or more records, returns the primary key(s).
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `record` | `dict` | Record to insert |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `record` | `dict \| list[dict]` | - | Record or list of records to insert |
+| `batch_size` | `int` | `None` | For bulk inserts, process in batches of this size |
+| `skip_validation` | `bool` | `False` | Skip schema validation for trusted data |
+
+For bulk inserts, the operation is atomic: if any record fails validation or has a duplicate key, all inserts are rolled back.
 
 **Raises:**
 
 - `DuplicateKeyError` if primary key exists
+- `SchemaValidationError` if record fails validation
+
+#### upsert
+
+```python
+table.upsert(record: dict, on_conflict: str = "update") -> tuple[Any, str]
+```
+
+Inserts a record or handles conflict if primary key exists.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `record` | `dict` | - | Record to insert or update |
+| `on_conflict` | `str` | `"update"` | Conflict strategy: `"update"`, `"ignore"`, or `"error"` |
+
+**Returns:** Tuple of `(primary_key, action)` where action is `"inserted"`, `"updated"`, or `"ignored"`.
+
+**Conflict strategies:**
+
+- `"update"` - Update existing record with new values (default)
+- `"ignore"` - Keep existing record, do nothing
+- `"error"` - Raise `DuplicateKeyError`
+
+**Raises:**
+
+- `DuplicateKeyError` if `on_conflict="error"` and record exists
 - `SchemaValidationError` if record fails validation
 
 #### select
@@ -133,7 +165,8 @@ table.select(
     order_by: str | list = None,
     limit: int = None,
     offset: int = 0,
-    copy: bool = True
+    copy: bool = True,
+    distinct: bool = False
 ) -> list[dict]
 ```
 
@@ -147,6 +180,7 @@ Retrieves matching records.
 | `limit` | `int` | `None` | Max records |
 | `offset` | `int` | `0` | Records to skip |
 | `copy` | `bool` | `True` | Return copies |
+| `distinct` | `bool` | `False` | Return only unique records |
 
 #### update
 
@@ -257,6 +291,8 @@ table.field.is_in([v1, v2, v3])  # IN operator
 table.field.startswith("prefix") # String prefix
 table.field.endswith("suffix")   # String suffix
 table.field.contains("substr")   # String contains
+table.field.is_null()            # Check if None or missing
+table.field.is_not_null()        # Check if not None
 ```
 
 ### Logical
@@ -347,10 +383,39 @@ logger.remove() -> None
 
 ---
 
+## Aggregations
+
+SQL-like aggregation functions for query results. See the [Aggregation Guide](guides/aggregations.md) for detailed usage.
+
+```python
+from dictdb import Count, Sum, Avg, Min, Max
+```
+
+| Class | Description |
+|-------|-------------|
+| `Count(field=None)` | Count records or non-None values |
+| `Sum(field)` | Sum of numeric values |
+| `Avg(field)` | Average of numeric values |
+| `Min(field)` | Minimum value |
+| `Max(field)` | Maximum value |
+
+---
+
+## Version
+
+```python
+from dictdb import __version__
+```
+
+The installed package version string (e.g., `"1.2.3"`).
+
+---
+
 ## Exceptions
 
 ```python
 from dictdb import (
+    DictDBError,
     DuplicateKeyError,
     DuplicateTableError,
     RecordNotFoundError,
@@ -361,10 +426,11 @@ from dictdb import (
 
 | Exception | Description |
 |-----------|-------------|
+| `DictDBError` | Base exception for all dictdb errors |
 | `DuplicateKeyError` | Primary key already exists |
 | `DuplicateTableError` | Table name already exists |
 | `RecordNotFoundError` | No records match criteria |
 | `TableNotFoundError` | Table doesn't exist |
 | `SchemaValidationError` | Record fails schema validation |
 
-All inherit from `DictDBError`.
+All exceptions inherit from `DictDBError`.

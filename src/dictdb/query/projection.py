@@ -1,7 +1,34 @@
+"""
+Column projection and deduplication utilities for query results.
+
+This module provides functions for selecting specific columns from records
+(projection) and removing duplicate records, similar to SQL SELECT and
+DISTINCT operations.
+
+Example::
+
+    from dictdb.query.projection import project_records, deduplicate_records
+
+    records = [{"id": 1, "name": "Alice", "age": 30}]
+    projected = project_records(records, ["name", "age"])
+    # Returns [{"name": "Alice", "age": 30}]
+
+    # With aliasing
+    projected = project_records(records, {"user_name": "name"})
+    # Returns [{"user_name": "Alice"}]
+"""
+
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from ..core.types import Record
 
+#: Type alias for column selection arguments.
+#:
+#: Supports three formats:
+#:     - ``List[str]``: Simple column names (e.g., ``["name", "age"]``)
+#:     - ``Dict[str, str]``: Alias to field mapping (e.g., ``{"user_name": "name"}``)
+#:     - ``List[Tuple[str, str]]``: List of (alias, field) pairs
+#:     - ``None``: Select all columns (no projection)
 ColumnsArg = Optional[
     Union[
         List[str],
@@ -12,6 +39,15 @@ ColumnsArg = Optional[
 
 
 def project_records(records: List[Record], columns: ColumnsArg) -> List[Record]:
+    """
+    Project records to include only specified columns, optionally with aliasing.
+
+    :param records: The list of records to project.
+    :param columns: Column specification. See :data:`ColumnsArg` for formats.
+        If None, returns records unchanged.
+    :return: A new list of records containing only the specified columns.
+    """
+
     def project(rec: Record) -> Record:
         if columns is None:
             return rec
@@ -41,7 +77,12 @@ def deduplicate_records(records: List[Record]) -> List[Record]:
     """
     Remove duplicate records while preserving order (first occurrence kept).
 
-    Handles unhashable types by converting them to hashable equivalents.
+    Handles unhashable types (dicts, lists, sets) by converting them to
+    hashable equivalents for comparison.
+
+    :param records: The list of records to deduplicate.
+    :return: A new list with duplicates removed, preserving the order of
+        first occurrences.
     """
     seen: set[Any] = set()
     result: List[Record] = []

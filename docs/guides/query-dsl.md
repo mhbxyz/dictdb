@@ -75,6 +75,18 @@ Condition(employees.department.is_in(["IT", "Engineering", "Data"]))
 # Equivalent to multiple OR conditions but more efficient
 ```
 
+## Null Checks
+
+Check for null (None) or missing field values:
+
+```python
+# Match records where the field is None or missing
+Condition(employees.manager_id.is_null())
+
+# Match records where the field exists and is not None
+Condition(employees.manager_id.is_not_null())
+```
+
 ## String Matching
 
 Match string patterns:
@@ -141,6 +153,27 @@ employees.select(columns={"employee": "name", "team": "department"})
 employees.select(columns=[("employee", "name"), ("team", "department")])
 # Same as above
 ```
+
+## Distinct Results
+
+Remove duplicate records from results:
+
+```python
+# Get unique departments
+employees.select(columns=["department"], distinct=True)
+# Returns: [{"department": "IT"}, {"department": "HR"}, {"department": "Sales"}]
+
+# Combine with other options
+employees.select(
+    columns=["department", "status"],
+    where=Condition(employees.salary >= 50000),
+    distinct=True,
+    order_by="department"
+)
+```
+
+!!! note "Distinct Behavior"
+    When duplicates exist, `distinct=True` preserves the first occurrence and removes subsequent duplicates.
 
 ## Record Copying
 

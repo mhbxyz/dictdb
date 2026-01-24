@@ -44,9 +44,22 @@ class Count(Agg):
     """
 
     def __init__(self, field: Optional[str] = None) -> None:
+        """
+        Initialize a Count aggregation.
+
+        :param field: Field name to count non-None values. If None, counts
+            all records regardless of field values.
+        """
         super().__init__(field)
 
     def compute(self, values: List[Any]) -> int:
+        """
+        Compute the count of values.
+
+        :param values: List of values extracted from records.
+        :return: Number of records (if field is None) or number of non-None
+            values (if field is specified).
+        """
         if self.field is None:
             # Count all records
             return len(values)
@@ -58,9 +71,20 @@ class Sum(Agg):
     """Sum aggregation for numeric fields."""
 
     def __init__(self, field: str) -> None:
+        """
+        Initialize a Sum aggregation.
+
+        :param field: Field name containing numeric values to sum.
+        """
         super().__init__(field)
 
     def compute(self, values: List[Any]) -> Optional[float]:
+        """
+        Compute the sum of numeric values.
+
+        :param values: List of values extracted from records.
+        :return: Sum of non-None values, or None if all values are None.
+        """
         nums = [v for v in values if v is not None]
         if not nums:
             return None
@@ -72,9 +96,20 @@ class Avg(Agg):
     """Average aggregation for numeric fields."""
 
     def __init__(self, field: str) -> None:
+        """
+        Initialize an Avg aggregation.
+
+        :param field: Field name containing numeric values to average.
+        """
         super().__init__(field)
 
     def compute(self, values: List[Any]) -> Optional[float]:
+        """
+        Compute the arithmetic mean of numeric values.
+
+        :param values: List of values extracted from records.
+        :return: Average of non-None values, or None if all values are None.
+        """
         nums = [v for v in values if v is not None]
         if not nums:
             return None
@@ -86,9 +121,20 @@ class Min(Agg):
     """Minimum value aggregation."""
 
     def __init__(self, field: str) -> None:
+        """
+        Initialize a Min aggregation.
+
+        :param field: Field name to find the minimum value.
+        """
         super().__init__(field)
 
     def compute(self, values: List[Any]) -> Optional[Any]:
+        """
+        Compute the minimum value.
+
+        :param values: List of values extracted from records.
+        :return: Minimum non-None value, or None if all values are None.
+        """
         nums = [v for v in values if v is not None]
         if not nums:
             return None
@@ -99,9 +145,20 @@ class Max(Agg):
     """Maximum value aggregation."""
 
     def __init__(self, field: str) -> None:
+        """
+        Initialize a Max aggregation.
+
+        :param field: Field name to find the maximum value.
+        """
         super().__init__(field)
 
     def compute(self, values: List[Any]) -> Optional[Any]:
+        """
+        Compute the maximum value.
+
+        :param values: List of values extracted from records.
+        :return: Maximum non-None value, or None if all values are None.
+        """
         nums = [v for v in values if v is not None]
         if not nums:
             return None

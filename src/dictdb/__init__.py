@@ -5,6 +5,7 @@ from .core.condition import Condition
 from .core.table import Table
 from .storage.database import DictDB
 from .exceptions import (
+    DictDBError,
     DuplicateKeyError,
     DuplicateTableError,
     RecordNotFoundError,
@@ -31,6 +32,7 @@ __all__ = [
     "Avg",
     "Min",
     "Max",
+    "DictDBError",
     "DuplicateKeyError",
     "DuplicateTableError",
     "RecordNotFoundError",

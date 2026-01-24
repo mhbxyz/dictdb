@@ -28,12 +28,29 @@ class PredicateExpr:
         return self.func(record)
 
     def __and__(self, other: "PredicateExpr") -> "PredicateExpr":
+        """
+        Combine two predicates with logical AND.
+
+        :param other: Another PredicateExpr to combine with.
+        :return: A new PredicateExpr that is True only if both predicates are True.
+        """
         return PredicateExpr(lambda rec: self(rec) and other(rec))
 
     def __or__(self, other: "PredicateExpr") -> "PredicateExpr":
+        """
+        Combine two predicates with logical OR.
+
+        :param other: Another PredicateExpr to combine with.
+        :return: A new PredicateExpr that is True if either predicate is True.
+        """
         return PredicateExpr(lambda rec: self(rec) or other(rec))
 
     def __invert__(self) -> "PredicateExpr":
+        """
+        Negate this predicate with logical NOT.
+
+        :return: A new PredicateExpr that is True when this predicate is False.
+        """
         return PredicateExpr(lambda rec: not self(rec))
 
     def __bool__(self) -> bool:
@@ -64,13 +81,36 @@ class Condition:
         self.condition: PredicateExpr = condition
 
     def __call__(self, record: Record) -> bool:
+        """
+        Evaluate the condition on a given record.
+
+        :param record: The record (dict) to evaluate.
+        :return: True if the record satisfies the condition, False otherwise.
+        """
         return self.condition(record)
 
     def __and__(self, other: "Condition") -> "Condition":
+        """
+        Combine two conditions with logical AND.
+
+        :param other: Another Condition to combine with.
+        :return: A new Condition that is True only if both conditions are True.
+        """
         return Condition(self.condition & other.condition)
 
     def __or__(self, other: "Condition") -> "Condition":
+        """
+        Combine two conditions with logical OR.
+
+        :param other: Another Condition to combine with.
+        :return: A new Condition that is True if either condition is True.
+        """
         return Condition(self.condition | other.condition)
 
     def __invert__(self) -> "Condition":
+        """
+        Negate this condition with logical NOT.
+
+        :return: A new Condition that is True when this condition is False.
+        """
         return Condition(~self.condition)
