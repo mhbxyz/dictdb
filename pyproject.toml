@@ -2,7 +2,7 @@
 name = "dctdb"
 version = "1.1.0"
 author = "Manoah Bernier"
-description = "A Python package to manipulate dictionaries like databases."
+description = "Pure Python in-memory database with SQL-like queries"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
