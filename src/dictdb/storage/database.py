@@ -18,9 +18,10 @@ Example::
 
 import asyncio
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from ..core.table import Table
+from ..core.types import Schema
 from ..exceptions import DuplicateTableError, TableNotFoundError
 from ..obs.logging import logger
 
@@ -216,3 +217,84 @@ class DictDB:
         :raises ValueError: If the file_format is unsupported.
         """
         return await asyncio.to_thread(cls.load, filename, file_format)
+
+    def import_csv(
+        self,
+        filepath: Union[str, Path],
+        table_name: str,
+        *,
+        primary_key: str = "id",
+        delimiter: str = ",",
+        has_header: bool = True,
+        encoding: str = "utf-8",
+        schema: Optional[Schema] = None,
+        infer_types: bool = True,
+        skip_validation: bool = False,
+    ) -> int:
+        """
+        Import data from a CSV file into a new table.
+
+        Creates a new table and populates it with records from the CSV file.
+        Type conversion is applied based on the provided schema or inferred
+        from the data.
+
+        :param filepath: Path to the CSV file to import.
+        :param table_name: Name for the new table.
+        :param primary_key: Field to use as primary key.
+        :param delimiter: CSV field delimiter.
+        :param has_header: Whether the CSV has a header row.
+        :param encoding: File encoding.
+        :param schema: Optional schema for type conversion and validation.
+        :param infer_types: If True and no schema, infer types from data.
+        :param skip_validation: Skip schema validation during insert.
+        :return: Number of records imported.
+        :raises DuplicateTableError: If a table with this name already exists.
+
+        Example::
+
+            db.import_csv("users.csv", "users", primary_key="id")
+
+            db.import_csv(
+                "products.csv",
+                "products",
+                delimiter=";",
+                schema={"id": int, "price": float, "name": str}
+            )
+        """
+        from .csv_io import read_csv
+
+        if table_name in self.tables:
+            raise DuplicateTableError(f"Table '{table_name}' already exists.")
+
+        logger.bind(
+            component="DictDB",
+            op="IMPORT_CSV",
+            table=table_name,
+            path=str(filepath),
+        ).debug("Importing CSV from {path} into table '{table}'.")
+
+        columns, records = read_csv(
+            filepath,
+            delimiter=delimiter,
+            has_header=has_header,
+            encoding=encoding,
+            schema=schema,
+            infer_types_enabled=infer_types,
+        )
+
+        # Create table with schema if provided
+        table = Table(table_name, primary_key=primary_key, schema=schema)
+        self.tables[table_name] = table
+
+        # Insert records
+        if records:
+            table.insert(records, skip_validation=skip_validation)
+
+        logger.bind(
+            component="DictDB",
+            op="IMPORT_CSV",
+            table=table_name,
+            records=len(records),
+        ).info("Imported {records} records into table '{table}'.")
+
+        return len(records)

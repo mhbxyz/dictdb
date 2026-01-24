@@ -1008,3 +1008,76 @@ class Table:
         with self._lock.write_lock():
             self._dirty_pks.clear()
             self._deleted_pks.clear()
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # CSV export
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def export_csv(
+        self,
+        filepath: str,
+        *,
+        records: Optional[List[Record]] = None,
+        columns: Optional[List[str]] = None,
+        where: Optional[WhereClause] = None,
+        delimiter: str = ",",
+        encoding: str = "utf-8",
+    ) -> int:
+        """
+        Export records to a CSV file.
+
+        By default, exports all records in the table. Use the `where` parameter
+        to filter records, or pass pre-computed `records` directly.
+
+        :param filepath: Path to the output CSV file.
+        :param records: Optional list of records to export. If None, uses table data.
+        :param columns: Optional list of column names to include (and their order).
+        :param where: Optional condition to filter records (ignored if records provided).
+        :param delimiter: CSV field delimiter.
+        :param encoding: File encoding.
+        :return: Number of records written.
+
+        Example::
+
+            # Export all records
+            users.export_csv("users.csv")
+
+            # Export filtered records
+            users.export_csv("active_users.csv", where=users.status == "active")
+
+            # Export specific columns
+            users.export_csv("names.csv", columns=["name", "email"])
+
+            # Export pre-computed results
+            results = users.select(where=users.age >= 18)
+            users.export_csv("adults.csv", records=results)
+        """
+        from ..storage.csv_io import write_csv
+
+        if records is None:
+            where = _normalize_where(where)
+            records = self.select(where=where, copy=True)
+
+        logger.bind(
+            table=self.table_name,
+            op="EXPORT_CSV",
+            path=filepath,
+            count=len(records),
+        ).debug("Exporting {count} records to {path}.")
+
+        count = write_csv(
+            filepath,
+            records,
+            columns=columns,
+            delimiter=delimiter,
+            encoding=encoding,
+        )
+
+        logger.bind(
+            table=self.table_name,
+            op="EXPORT_CSV",
+            path=filepath,
+            count=count,
+        ).info("Exported {count} records to {path}.")
+
+        return count

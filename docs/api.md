@@ -100,6 +100,43 @@ await DictDB.async_load(filename: str | Path, file_format: str) -> DictDB
 
 Async version of `load()`.
 
+#### import_csv
+
+```python
+db.import_csv(
+    filepath: str | Path,
+    table_name: str,
+    *,
+    primary_key: str = "id",
+    delimiter: str = ",",
+    has_header: bool = True,
+    encoding: str = "utf-8",
+    schema: dict[str, type] = None,
+    infer_types: bool = True,
+    skip_validation: bool = False
+) -> int
+```
+
+Imports data from a CSV file into a new table.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `filepath` | `str \| Path` | - | Path to the CSV file |
+| `table_name` | `str` | - | Name for the new table |
+| `primary_key` | `str` | `"id"` | Field to use as primary key |
+| `delimiter` | `str` | `","` | CSV field delimiter |
+| `has_header` | `bool` | `True` | Whether first row is header |
+| `encoding` | `str` | `"utf-8"` | File encoding |
+| `schema` | `dict[str, type]` | `None` | Type conversion schema |
+| `infer_types` | `bool` | `True` | Auto-detect column types |
+| `skip_validation` | `bool` | `False` | Skip schema validation |
+
+**Returns:** Number of records imported.
+
+**Raises:** `DuplicateTableError` if table already exists.
+
+See the [CSV Guide](guides/csv.md) for detailed usage.
+
 ---
 
 ## Table
@@ -236,6 +273,35 @@ table.schema_fields() -> list[str]   # Schema fields
 table.all() -> list[dict]         # All records as copies
 table.copy() -> dict[Any, dict]   # Dict of pk -> record copy
 ```
+
+#### export_csv
+
+```python
+table.export_csv(
+    filepath: str | Path,
+    *,
+    records: list[dict] = None,
+    columns: list[str] = None,
+    where: Condition | PredicateExpr = None,
+    delimiter: str = ",",
+    encoding: str = "utf-8"
+) -> int
+```
+
+Exports records to a CSV file.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `filepath` | `str \| Path` | - | Output CSV file path |
+| `records` | `list[dict]` | `None` | Pre-computed records to export |
+| `columns` | `list[str]` | `None` | Columns to include (and their order) |
+| `where` | `Condition \| PredicateExpr` | `None` | Filter condition |
+| `delimiter` | `str` | `","` | CSV field delimiter |
+| `encoding` | `str` | `"utf-8"` | File encoding |
+
+**Returns:** Number of records written.
+
+See the [CSV Guide](guides/csv.md) for detailed usage.
 
 ---
 
