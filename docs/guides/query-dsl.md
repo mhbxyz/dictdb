@@ -7,7 +7,7 @@ DictDB provides a fluent query DSL that lets you build conditions using Python o
 Access table fields as attributes to create conditions:
 
 ```python
-from dictdb import DictDB, Condition
+from dictdb import DictDB
 
 db = DictDB()
 db.create_table("employees")
@@ -15,9 +15,21 @@ employees = db.get_table("employees")
 
 # employees.name returns a Field object
 # Field == "Alice" returns a PredicateExpr
-# Condition wraps the PredicateExpr for use in queries
-employees.select(where=Condition(employees.name == "Alice"))
+# Pass directly to where= parameter
+employees.select(where=employees.name == "Alice")
 ```
+
+!!! note "Condition Wrapper (Optional)"
+    The `Condition()` wrapper is optional. Both syntaxes are supported:
+
+    ```python
+    # Recommended: direct syntax
+    employees.select(where=employees.age >= 18)
+
+    # Also works: explicit Condition wrapper
+    from dictdb import Condition
+    employees.select(where=Condition(employees.age >= 18))
+    ```
 
 ## Comparison Operators
 
@@ -25,18 +37,18 @@ All standard comparison operators are supported:
 
 ```python
 # Equality
-Condition(employees.department == "IT")
+employees.select(where=employees.department == "IT")
 
 # Inequality
-Condition(employees.department != "HR")
+employees.select(where=employees.department != "HR")
 
 # Less than / Less than or equal
-Condition(employees.age < 30)
-Condition(employees.age <= 30)
+employees.select(where=employees.age < 30)
+employees.select(where=employees.age <= 30)
 
 # Greater than / Greater than or equal
-Condition(employees.salary > 50000)
-Condition(employees.salary >= 50000)
+employees.select(where=employees.salary > 50000)
+employees.select(where=employees.salary >= 50000)
 ```
 
 ## Logical Operators
@@ -45,19 +57,21 @@ Combine conditions with `&` (AND), `|` (OR), and `~` (NOT):
 
 ```python
 # AND: both conditions must be true
-Condition((employees.department == "IT") & (employees.salary >= 80000))
+employees.select(where=(employees.department == "IT") & (employees.salary >= 80000))
 
 # OR: either condition must be true
-Condition((employees.department == "IT") | (employees.department == "HR"))
+employees.select(where=(employees.department == "IT") | (employees.department == "HR"))
 
 # NOT: invert a condition
-Condition(~(employees.department == "Sales"))
+employees.select(where=~(employees.department == "Sales"))
 
 # Complex combinations
-Condition(
-    ((employees.department == "IT") | (employees.department == "Engineering"))
-    & (employees.salary >= 70000)
-    & ~(employees.status == "inactive")
+employees.select(
+    where=(
+        ((employees.department == "IT") | (employees.department == "Engineering"))
+        & (employees.salary >= 70000)
+        & ~(employees.status == "inactive")
+    )
 )
 ```
 
@@ -70,7 +84,7 @@ Check if a field value is in a list:
 
 ```python
 # Match any of the values
-Condition(employees.department.is_in(["IT", "Engineering", "Data"]))
+employees.select(where=employees.department.is_in(["IT", "Engineering", "Data"]))
 
 # Equivalent to multiple OR conditions but more efficient
 ```
@@ -81,14 +95,14 @@ Check if a field value is within an inclusive range:
 
 ```python
 # Match values in range [30, 50]
-Condition(employees.age.between(30, 50))
+employees.select(where=employees.age.between(30, 50))
 
 # Equivalent to (but more efficient than):
-Condition((employees.age >= 30) & (employees.age <= 50))
+employees.select(where=(employees.age >= 30) & (employees.age <= 50))
 
 # Works with any comparable types
-Condition(employees.hire_date.between("2020-01-01", "2023-12-31"))
-Condition(employees.salary.between(50000, 100000))
+employees.select(where=employees.hire_date.between("2020-01-01", "2023-12-31"))
+employees.select(where=employees.salary.between(50000, 100000))
 ```
 
 !!! tip "Index Optimization"
@@ -100,10 +114,10 @@ Check for null (None) or missing field values:
 
 ```python
 # Match records where the field is None or missing
-Condition(employees.manager_id.is_null())
+employees.select(where=employees.manager_id.is_null())
 
 # Match records where the field exists and is not None
-Condition(employees.manager_id.is_not_null())
+employees.select(where=employees.manager_id.is_not_null())
 ```
 
 ## String Matching
@@ -112,13 +126,13 @@ Match string patterns:
 
 ```python
 # Starts with
-Condition(employees.name.startswith("A"))
+employees.select(where=employees.name.startswith("A"))
 
 # Ends with
-Condition(employees.email.endswith("@company.com"))
+employees.select(where=employees.email.endswith("@company.com"))
 
 # Contains
-Condition(employees.name.contains("Smith"))
+employees.select(where=employees.name.contains("Smith"))
 ```
 
 ## LIKE Pattern Matching
@@ -127,16 +141,16 @@ SQL-style LIKE patterns with wildcards:
 
 ```python
 # % matches any sequence of characters (including empty)
-Condition(employees.name.like("A%"))           # Starts with A
-Condition(employees.email.like("%@gmail.com")) # Ends with @gmail.com
-Condition(employees.name.like("%smith%"))      # Contains smith
+employees.select(where=employees.name.like("A%"))           # Starts with A
+employees.select(where=employees.email.like("%@gmail.com")) # Ends with @gmail.com
+employees.select(where=employees.name.like("%smith%"))      # Contains smith
 
 # _ matches exactly one character
-Condition(employees.code.like("A_C"))          # Matches A1C, A2C, ABC, etc.
-Condition(employees.id.like("___"))            # Exactly 3 characters
+employees.select(where=employees.code.like("A_C"))          # Matches A1C, A2C, ABC, etc.
+employees.select(where=employees.id.like("___"))            # Exactly 3 characters
 
 # Combine wildcards
-Condition(employees.file.like("test_.%"))      # test1.txt, test2.doc, etc.
+employees.select(where=employees.file.like("test_.%"))      # test1.txt, test2.doc, etc.
 ```
 
 ### Escape Characters
@@ -145,10 +159,10 @@ To match literal `%` or `_`, use an escape character:
 
 ```python
 # Match strings ending with literal %
-Condition(products.discount.like("%\\%", escape="\\"))  # 10%, 20%, etc.
+employees.select(where=products.discount.like("%\\%", escape="\\"))  # 10%, 20%, etc.
 
 # Match strings containing literal _
-Condition(files.name.like("%\\_v1%", escape="\\"))  # file_v1.txt, etc.
+employees.select(where=files.name.like("%\\_v1%", escape="\\"))  # file_v1.txt, etc.
 ```
 
 !!! tip "Index Optimization"
@@ -160,17 +174,17 @@ All string matching methods have case-insensitive variants with an `i` prefix:
 
 ```python
 # Case-insensitive equality
-Condition(employees.name.iequals("alice"))  # Matches "Alice", "ALICE", etc.
+employees.select(where=employees.name.iequals("alice"))  # Matches "Alice", "ALICE", etc.
 
 # Case-insensitive contains
-Condition(employees.name.icontains("smith"))  # Matches "Smith", "SMITH", etc.
+employees.select(where=employees.name.icontains("smith"))  # Matches "Smith", "SMITH", etc.
 
 # Case-insensitive prefix/suffix
-Condition(employees.name.istartswith("a"))  # Matches "Alice", "ADAM", etc.
-Condition(employees.email.iendswith("@gmail.com"))  # Matches "@Gmail.COM", etc.
+employees.select(where=employees.name.istartswith("a"))  # Matches "Alice", "ADAM", etc.
+employees.select(where=employees.email.iendswith("@gmail.com"))  # Matches "@Gmail.COM", etc.
 
 # Case-insensitive LIKE
-Condition(employees.name.ilike("a%"))  # Matches "Alice", "adam", "ANNA", etc.
+employees.select(where=employees.name.ilike("a%"))  # Matches "Alice", "adam", "ANNA", etc.
 ```
 
 | Method | Case-Insensitive Variant |
@@ -245,7 +259,7 @@ employees.select(columns=["department"], distinct=True)
 # Combine with other options
 employees.select(
     columns=["department", "status"],
-    where=Condition(employees.salary >= 50000),
+    where=employees.salary >= 50000,
     distinct=True,
     order_by="department"
 )
@@ -271,7 +285,7 @@ results = employees.select(copy=False)
 ## Complete Example
 
 ```python
-from dictdb import DictDB, Condition
+from dictdb import DictDB
 
 db = DictDB()
 db.create_table("employees", primary_key="emp_id")
@@ -286,7 +300,7 @@ employees.insert({"emp_id": 4, "name": "Diana", "department": "Sales", "salary":
 # Find IT employees earning >= 80000
 high_earners = employees.select(
     columns=["name", "salary"],
-    where=Condition((employees.department == "IT") & (employees.salary >= 80000)),
+    where=(employees.department == "IT") & (employees.salary >= 80000),
     order_by="-salary"
 )
 # [{"name": "Charlie", "salary": 85000}]

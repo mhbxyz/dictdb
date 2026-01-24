@@ -16,11 +16,11 @@ Key features:
 
 Example::
 
-    from dictdb import Table, Condition
+    from dictdb import Table
 
     users = Table("users", schema={"id": int, "name": str, "age": int})
     users.insert({"name": "Alice", "age": 30})
-    adults = users.select(where=Condition(users.age >= 18))
+    adults = users.select(where=users.age >= 18)
 """
 
 import operator
@@ -31,7 +31,7 @@ from ..exceptions import (
     DuplicateKeyError,
     RecordNotFoundError,
 )
-from .condition import Condition
+from .condition import Condition, PredicateExpr
 from ..index import IndexBase
 from ..index.registry import create as create_index
 from ..obs.logging import logger
@@ -44,6 +44,30 @@ from .field import (
     _LikeCondition,
 )
 from .rwlock import RWLock
+
+# Type alias for where parameter: accepts both Condition and PredicateExpr
+WhereClause = Union[Condition, PredicateExpr]
+
+
+def _normalize_where(where: Optional[WhereClause]) -> Optional[Condition]:
+    """
+    Normalize a where clause to a Condition for internal use.
+
+    Accepts either a Condition or a PredicateExpr, wrapping the latter
+    in a Condition for consistent internal handling.
+
+    :param where: A Condition, PredicateExpr, or None.
+    :return: A Condition wrapping the predicate, or None.
+    """
+    if where is None:
+        return None
+    if isinstance(where, Condition):
+        return where
+    if isinstance(where, PredicateExpr):
+        return Condition(where)
+    raise TypeError(
+        f"'where' must be a Condition or PredicateExpr, got {type(where).__name__}"
+    )
 
 
 class _RemovedField:
@@ -604,7 +628,7 @@ class Table:
         columns: Optional[
             Union[List[str], Dict[str, str], List[Tuple[str, str]]]
         ] = None,
-        where: Optional[Condition] = None,
+        where: Optional[WhereClause] = None,
         *,
         order_by: Optional[Union[str, List[str], Tuple[str, ...]]] = None,
         limit: Optional[int] = None,
@@ -621,7 +645,8 @@ class Table:
                         - list of field names (str)
                         - dict of alias -> field name
                         - list of (alias, field) tuples
-        :param where: A Condition used to filter records.
+        :param where: A Condition or PredicateExpr used to filter records.
+                      PredicateExpr is returned by field comparisons (e.g., table.age >= 18).
         :param order_by: Field name or list of field names to sort by. Prefix with '-' for descending.
         :param limit: Maximum number of records to return after offset.
         :param offset: Number of records to skip from the start.
@@ -630,6 +655,7 @@ class Table:
         :param distinct: If True, return only unique records (first occurrence preserved).
         :return: A list of matching records.
         """
+        where = _normalize_where(where)
         logger.bind(table=self.table_name, op="SELECT").debug(
             f"[SELECT] Querying '{self.table_name}' (columns={columns}, filtered={where is not None})"
         )
@@ -667,18 +693,19 @@ class Table:
             results = deduplicate_records(results)
         return results
 
-    def update(self, changes: Record, where: Optional[Condition] = None) -> int:
+    def update(self, changes: Record, where: Optional[WhereClause] = None) -> int:
         """
         Updates records that satisfy the given condition. The operation is atomic:
         if any record fails validation, all changes are rolled back.
         Indexes are updated automatically.
 
         :param changes: Dictionary of field-value pairs to update.
-        :param where: A Condition that determines which records to update.
+        :param where: A Condition or PredicateExpr that determines which records to update.
         :raises RecordNotFoundError: If no records match the criteria.
         :raises Exception: If validation fails, all changes are rolled back.
         :return: The number of records updated.
         """
+        where = _normalize_where(where)
         logger.bind(table=self.table_name, op="UPDATE").debug(
             f"[UPDATE] Updating records in '{self.table_name}' (fields={list(changes.keys())})"
         )
@@ -722,14 +749,15 @@ class Table:
         )
         return updated_count
 
-    def delete(self, where: Optional[Condition] = None) -> int:
+    def delete(self, where: Optional[WhereClause] = None) -> int:
         """
         Deletes records matching the given condition. Indexes are updated automatically.
 
-        :param where: A Condition that determines which records to delete.
+        :param where: A Condition or PredicateExpr that determines which records to delete.
         :raises RecordNotFoundError: If no records match the criteria.
         :return: The number of records deleted.
         """
+        where = _normalize_where(where)
         logger.bind(table=self.table_name, op="DELETE").debug(
             f"[DELETE] Deleting from '{self.table_name}' (filtered={where is not None})"
         )
@@ -865,7 +893,7 @@ class Table:
 
     def aggregate(
         self,
-        where: Optional[Condition] = None,
+        where: Optional[WhereClause] = None,
         group_by: Optional[Union[str, List[str]]] = None,
         **aggregations: Any,
     ) -> Union[Dict[str, Any], List[Record]]:
@@ -874,7 +902,7 @@ class Table:
 
         Supports aggregation classes: Count, Sum, Avg, Min, Max.
 
-        :param where: Optional condition to filter records before aggregating.
+        :param where: Optional Condition or PredicateExpr to filter records before aggregating.
         :param group_by: Optional field or list of fields to group by.
         :param aggregations: Keyword arguments mapping result names to Agg instances
                             (e.g., total=Sum("salary"), avg_age=Avg("age")).
@@ -886,7 +914,7 @@ class Table:
             from dictdb import Count, Sum, Avg, Max
 
             # Count all active users
-            users.aggregate(where=Condition(users.active == True), count=Count())
+            users.aggregate(where=users.active == True, count=Count())
             # Returns: {"count": 42}
 
             # Get salary stats by department
@@ -903,6 +931,8 @@ class Table:
             compute_aggregations,
             group_and_aggregate,
         )
+
+        where = _normalize_where(where)
 
         # Validate aggregations
         agg_dict: Dict[str, Agg] = {}

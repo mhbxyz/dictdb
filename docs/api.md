@@ -161,7 +161,7 @@ Inserts a record or handles conflict if primary key exists.
 ```python
 table.select(
     columns: list | dict = None,
-    where: Condition = None,
+    where: Condition | PredicateExpr = None,
     order_by: str | list = None,
     limit: int = None,
     offset: int = 0,
@@ -175,7 +175,7 @@ Retrieves matching records.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `columns` | `list \| dict` | `None` | Column projection |
-| `where` | `Condition` | `None` | Filter condition |
+| `where` | `Condition \| PredicateExpr` | `None` | Filter condition (Condition wrapper optional) |
 | `order_by` | `str \| list` | `None` | Sort order |
 | `limit` | `int` | `None` | Max records |
 | `offset` | `int` | `0` | Records to skip |
@@ -185,10 +185,10 @@ Retrieves matching records.
 #### update
 
 ```python
-table.update(changes: dict, where: Condition = None) -> int
+table.update(changes: dict, where: Condition | PredicateExpr = None) -> int
 ```
 
-Updates matching records, returns count.
+Updates matching records, returns count. The `Condition` wrapper is optional.
 
 **Raises:**
 
@@ -198,10 +198,10 @@ Updates matching records, returns count.
 #### delete
 
 ```python
-table.delete(where: Condition = None) -> int
+table.delete(where: Condition | PredicateExpr = None) -> int
 ```
 
-Deletes matching records, returns count.
+Deletes matching records, returns count. The `Condition` wrapper is optional.
 
 **Raises:** `RecordNotFoundError` if no records match.
 
@@ -241,7 +241,7 @@ table.copy() -> dict[Any, dict]   # Dict of pk -> record copy
 
 ## Condition
 
-Wraps a predicate expression for use in queries.
+Wraps a predicate expression for use in queries. **The `Condition` wrapper is optional** - you can pass `PredicateExpr` directly to `where=` parameters.
 
 ```python
 from dictdb import Condition
@@ -258,13 +258,17 @@ Wraps a `PredicateExpr` created from field comparisons.
 ### Usage
 
 ```python
-# Create from field comparison
-Condition(table.field == value)
+# Recommended: pass PredicateExpr directly (no wrapper needed)
+table.select(where=table.field == value)
+table.select(where=(table.age >= 18) & (table.active == True))
+
+# Also works: explicit Condition wrapper
+table.select(where=Condition(table.field == value))
 
 # Combine conditions
-Condition(expr1 & expr2)  # AND
-Condition(expr1 | expr2)  # OR
-Condition(~expr)          # NOT
+table.select(where=(expr1) & (expr2))  # AND
+table.select(where=(expr1) | (expr2))  # OR
+table.select(where=~(expr))            # NOT
 ```
 
 ---
