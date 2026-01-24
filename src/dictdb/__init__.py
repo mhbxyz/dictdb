@@ -12,6 +12,7 @@ from .exceptions import (
     TableNotFoundError,
 )
 from .obs.logging import logger, configure_logging
+from .query.aggregate import Count, Sum, Avg, Min, Max
 
 # Expose the installed package version dynamically to avoid duplication.
 try:
@@ -25,6 +26,11 @@ __all__ = [
     "DictDB",
     "Table",
     "Condition",
+    "Count",
+    "Sum",
+    "Avg",
+    "Min",
+    "Max",
     "DuplicateKeyError",
     "DuplicateTableError",
     "RecordNotFoundError",

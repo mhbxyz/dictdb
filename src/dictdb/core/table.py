@@ -613,6 +613,83 @@ class Table:
         return self.primary_key
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Aggregation support
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def aggregate(
+        self,
+        where: Optional[Condition] = None,
+        group_by: Optional[Union[str, List[str]]] = None,
+        **aggregations: Any,
+    ) -> Union[Dict[str, Any], List[Record]]:
+        """
+        Compute aggregations on table records.
+
+        Supports aggregation classes: Count, Sum, Avg, Min, Max.
+
+        :param where: Optional condition to filter records before aggregating.
+        :param group_by: Optional field or list of fields to group by.
+        :param aggregations: Keyword arguments mapping result names to Agg instances
+                            (e.g., total=Sum("salary"), avg_age=Avg("age")).
+        :return: If group_by is None, returns a dict with aggregation results.
+                If group_by is provided, returns a list of records with group
+                keys and aggregation values.
+
+        Examples:
+            from dictdb import Count, Sum, Avg, Max
+
+            # Count all active users
+            users.aggregate(where=Condition(users.active == True), count=Count())
+            # Returns: {"count": 42}
+
+            # Get salary stats by department
+            users.aggregate(
+                group_by="department",
+                count=Count(),
+                avg_salary=Avg("salary"),
+                max_salary=Max("salary"),
+            )
+            # Returns: [{"department": "IT", "count": 10, "avg_salary": 75000, ...}, ...]
+        """
+        from ..query.aggregate import (
+            Agg,
+            compute_aggregations,
+            group_and_aggregate,
+        )
+
+        # Validate aggregations
+        agg_dict: Dict[str, Agg] = {}
+        for result_key, agg in aggregations.items():
+            if not isinstance(agg, Agg):
+                raise TypeError(
+                    f"Expected Agg instance for '{result_key}', got {type(agg).__name__}"
+                )
+            agg_dict[result_key] = agg
+
+        # Get filtered records
+        with self._lock.read_lock():
+            if where is not None:
+                candidate_pks = self._get_indexed_candidate_pks(where)
+                if candidate_pks is not None:
+                    records = [
+                        self.records[pk].copy()
+                        for pk in candidate_pks
+                        if pk in self.records and where(self.records[pk])
+                    ]
+                else:
+                    records = [
+                        rec.copy() for rec in self.records.values() if where(rec)
+                    ]
+            else:
+                records = [rec.copy() for rec in self.records.values()]
+
+        # Compute aggregations
+        if group_by is not None:
+            return group_and_aggregate(records, group_by, agg_dict)
+        else:
+            return compute_aggregations(records, agg_dict)
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Incremental backup support
     # ──────────────────────────────────────────────────────────────────────────
 
