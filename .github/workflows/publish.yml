@@ -2,15 +2,6 @@ name: Publish to PyPI
 
 on:
   workflow_dispatch:
-    inputs:
-      target:
-        description: 'Publish target'
-        required: true
-        default: 'testpypi'
-        type: choice
-        options:
-          - testpypi
-          - pypi
 
 permissions:
   contents: write
@@ -19,7 +10,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.target }}
+    environment: pypi
 
     steps:
       - uses: actions/checkout@v4
@@ -66,12 +57,5 @@ jobs:
             dist/*.whl
             dist/*.tar.gz
 
-      - name: Publish to TestPyPI
-        if: inputs.target == 'testpypi'
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-
       - name: Publish to PyPI
-        if: inputs.target == 'pypi'
         uses: pypa/gh-action-pypi-publish@release/v1
