@@ -1,5 +1,5 @@
 import operator
-from typing import Any, Optional, Dict, List, Tuple, Union
+from typing import Any, Literal, Optional, Dict, List, Tuple, Union
 
 from ..exceptions import (
     SchemaValidationError,
@@ -351,6 +351,78 @@ class Table:
             "Record inserted into '{table}' (pk={pk})."
         )
         return pk
+
+    def upsert(
+        self,
+        record: Record,
+        on_conflict: Literal["update", "ignore", "error"] = "update",
+    ) -> Tuple[Any, str]:
+        """
+        Insert a record or update it if it already exists.
+
+        :param record: The record to insert or update.
+        :param on_conflict: Strategy when primary key exists:
+                           - "update": update the existing record (default)
+                           - "ignore": do nothing, keep existing record
+                           - "error": raise DuplicateKeyError
+        :return: Tuple of (primary_key, action) where action is one of:
+                "inserted", "updated", or "ignored".
+        :raises DuplicateKeyError: If on_conflict="error" and record exists.
+        :raises SchemaValidationError: If the record fails schema validation.
+        """
+        logger.bind(table=self.table_name, op="UPSERT").debug(
+            f"[UPSERT] Upserting record into '{self.table_name}'"
+        )
+        with self._lock.write_lock():
+            pk = record.get(self.primary_key)
+
+            # No PK provided: always insert with auto-generated key
+            if pk is None:
+                record[self.primary_key] = self._next_pk
+                pk = self._next_pk
+                self._next_pk += 1
+                if self.schema is not None:
+                    self.validate_record(record)
+                self.records[pk] = record
+                self._update_indexes_on_insert(record)
+                self._dirty_pks.add(pk)
+                self._deleted_pks.discard(pk)
+                action = "inserted"
+
+            elif pk in self.records:
+                # Conflict: record with this PK exists
+                if on_conflict == "error":
+                    raise DuplicateKeyError(
+                        f"Record with key '{pk}' already exists in table '{self.table_name}'."
+                    )
+                if on_conflict == "ignore":
+                    action = "ignored"
+                else:
+                    # on_conflict == "update"
+                    old_record = self.records[pk].copy()
+                    self.records[pk].update(record)
+                    if self.schema is not None:
+                        self.validate_record(self.records[pk])
+                    self._update_indexes_on_update(pk, old_record, self.records[pk])
+                    self._dirty_pks.add(pk)
+                    action = "updated"
+
+            else:
+                # No conflict: insert new record
+                if isinstance(pk, int) and pk >= self._next_pk:
+                    self._next_pk = pk + 1
+                if self.schema is not None:
+                    self.validate_record(record)
+                self.records[pk] = record
+                self._update_indexes_on_insert(record)
+                self._dirty_pks.add(pk)
+                self._deleted_pks.discard(pk)
+                action = "inserted"
+
+        logger.bind(table=self.table_name, op="UPSERT", pk=pk, action=action).info(
+            "Upsert completed on '{table}' (pk={pk}, action={action})."
+        )
+        return (pk, action)
 
     def select(
         self,
