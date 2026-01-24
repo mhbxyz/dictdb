@@ -260,15 +260,81 @@ Wraps a `PredicateExpr` created from field comparisons.
 ```python
 # Recommended: pass PredicateExpr directly (no wrapper needed)
 table.select(where=table.field == value)
-table.select(where=(table.age >= 18) & (table.active == True))
 
 # Also works: explicit Condition wrapper
 table.select(where=Condition(table.field == value))
+```
 
-# Combine conditions
-table.select(where=(expr1) & (expr2))  # AND
-table.select(where=(expr1) | (expr2))  # OR
-table.select(where=~(expr))            # NOT
+---
+
+## Logical Functions
+
+Combine conditions using readable functions.
+
+```python
+from dictdb import And, Or, Not
+```
+
+### And
+
+```python
+And(*conditions) -> PredicateExpr
+```
+
+Returns a condition that is True only if **all** operands are True.
+
+```python
+# Two conditions
+table.select(where=And(table.age >= 18, table.active == True))
+
+# Multiple conditions
+table.select(where=And(table.dept == "IT", table.active == True, table.level >= 3))
+```
+
+### Or
+
+```python
+Or(*conditions) -> PredicateExpr
+```
+
+Returns a condition that is True if **any** operand is True.
+
+```python
+# Match multiple values
+table.select(where=Or(table.dept == "IT", table.dept == "HR", table.dept == "Sales"))
+```
+
+### Not
+
+```python
+Not(condition) -> PredicateExpr
+```
+
+Returns a condition that is True when the operand is False.
+
+```python
+table.select(where=Not(table.status == "inactive"))
+```
+
+### Combining Functions
+
+```python
+# Complex nested conditions
+table.select(where=And(
+    Or(table.dept == "IT", table.dept == "Engineering"),
+    table.salary >= 70000,
+    Not(table.status == "inactive")
+))
+```
+
+### Alternative: Symbolic Operators
+
+The `&`, `|`, `~` operators are also supported but require careful use of parentheses:
+
+```python
+table.select(where=(table.age >= 18) & (table.active == True))  # AND
+table.select(where=(table.dept == "IT") | (table.dept == "HR"))  # OR
+table.select(where=~(table.status == "inactive"))                # NOT
 ```
 
 ---
@@ -313,10 +379,16 @@ table.field.ilike("A%")          # Case-insensitive LIKE
 
 ### Logical
 
+Use `And`, `Or`, `Not` functions (recommended) or symbolic operators:
+
 ```python
-(expr1) & (expr2)  # AND
-(expr1) | (expr2)  # OR
-~(expr)            # NOT
+And(expr1, expr2)  # AND (preferred)
+Or(expr1, expr2)   # OR (preferred)
+Not(expr)          # NOT (preferred)
+
+(expr1) & (expr2)  # AND (alternative)
+(expr1) | (expr2)  # OR (alternative)
+~(expr)            # NOT (alternative)
 ```
 
 ---

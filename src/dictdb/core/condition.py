@@ -1,6 +1,9 @@
-from typing import Any
+from typing import Any, Union
 
 from .types import Record, Predicate
+
+# Type alias for expressions that can be used in logical functions
+LogicalOperand = Union["PredicateExpr", "Condition"]
 
 
 class PredicateExpr:
@@ -114,3 +117,116 @@ class Condition:
         :return: A new Condition that is True when this condition is False.
         """
         return Condition(~self.condition)
+
+
+def _to_predicate(operand: LogicalOperand) -> PredicateExpr:
+    """
+    Convert a LogicalOperand to a PredicateExpr.
+
+    :param operand: A PredicateExpr or Condition.
+    :return: The underlying PredicateExpr.
+    :raises TypeError: If operand is not a valid type.
+    """
+    if isinstance(operand, PredicateExpr):
+        return operand
+    if isinstance(operand, Condition):
+        return operand.condition
+    raise TypeError(
+        f"Expected PredicateExpr or Condition, got {type(operand).__name__}"
+    )
+
+
+def And(*operands: LogicalOperand) -> PredicateExpr:
+    """
+    Combine multiple conditions with logical AND.
+
+    Returns a PredicateExpr that is True only if all operands are True.
+    More readable alternative to the ``&`` operator.
+
+    :param operands: Two or more PredicateExpr or Condition objects.
+    :return: A PredicateExpr representing the AND of all operands.
+    :raises ValueError: If fewer than 2 operands are provided.
+
+    Example::
+
+        from dictdb import And
+
+        # Simple AND
+        users.select(where=And(users.age >= 18, users.active == True))
+
+        # Multiple conditions
+        users.select(where=And(
+            users.department == "IT",
+            users.salary >= 50000,
+            users.status == "active"
+        ))
+    """
+    if len(operands) < 2:
+        raise ValueError("And() requires at least 2 operands")
+
+    predicates = [_to_predicate(op) for op in operands]
+    result = predicates[0]
+    for pred in predicates[1:]:
+        result = result & pred
+    return result
+
+
+def Or(*operands: LogicalOperand) -> PredicateExpr:
+    """
+    Combine multiple conditions with logical OR.
+
+    Returns a PredicateExpr that is True if any operand is True.
+    More readable alternative to the ``|`` operator.
+
+    :param operands: Two or more PredicateExpr or Condition objects.
+    :return: A PredicateExpr representing the OR of all operands.
+    :raises ValueError: If fewer than 2 operands are provided.
+
+    Example::
+
+        from dictdb import Or
+
+        # Simple OR
+        users.select(where=Or(users.department == "IT", users.department == "HR"))
+
+        # Multiple conditions
+        users.select(where=Or(
+            users.role == "admin",
+            users.role == "moderator",
+            users.is_superuser == True
+        ))
+    """
+    if len(operands) < 2:
+        raise ValueError("Or() requires at least 2 operands")
+
+    predicates = [_to_predicate(op) for op in operands]
+    result = predicates[0]
+    for pred in predicates[1:]:
+        result = result | pred
+    return result
+
+
+def Not(operand: LogicalOperand) -> PredicateExpr:
+    """
+    Negate a condition with logical NOT.
+
+    Returns a PredicateExpr that is True when the operand is False.
+    More readable alternative to the ``~`` operator.
+
+    :param operand: A PredicateExpr or Condition to negate.
+    :return: A PredicateExpr representing the negation.
+
+    Example::
+
+        from dictdb import Not
+
+        # Simple NOT
+        users.select(where=Not(users.department == "Sales"))
+
+        # Combined with And/Or
+        users.select(where=And(
+            users.age >= 18,
+            Not(users.status == "banned")
+        ))
+    """
+    return ~_to_predicate(operand)

@@ -53,30 +53,55 @@ employees.select(where=employees.salary >= 50000)
 
 ## Logical Operators
 
-Combine conditions with `&` (AND), `|` (OR), and `~` (NOT):
+Combine conditions using `And`, `Or`, and `Not` functions:
 
 ```python
-# AND: both conditions must be true
-employees.select(where=(employees.department == "IT") & (employees.salary >= 80000))
+from dictdb import And, Or, Not
 
-# OR: either condition must be true
-employees.select(where=(employees.department == "IT") | (employees.department == "HR"))
+# AND: all conditions must be true
+employees.select(where=And(employees.department == "IT", employees.salary >= 80000))
+
+# OR: any condition must be true
+employees.select(where=Or(employees.department == "IT", employees.department == "HR"))
 
 # NOT: invert a condition
-employees.select(where=~(employees.department == "Sales"))
+employees.select(where=Not(employees.department == "Sales"))
 
-# Complex combinations
-employees.select(
-    where=(
-        ((employees.department == "IT") | (employees.department == "Engineering"))
-        & (employees.salary >= 70000)
-        & ~(employees.status == "inactive")
-    )
-)
+# Complex combinations - structure is clear
+employees.select(where=And(
+    Or(employees.department == "IT", employees.department == "Engineering"),
+    employees.salary >= 70000,
+    Not(employees.status == "inactive")
+))
 ```
 
-!!! warning "Use Parentheses"
-    Always wrap individual conditions in parentheses when combining them. Python's operator precedence may not work as expected otherwise.
+### Multiple Arguments
+
+`And` and `Or` accept any number of arguments (minimum 2):
+
+```python
+# More readable than chaining
+employees.select(where=And(
+    employees.department == "IT",
+    employees.active == True,
+    employees.salary >= 50000,
+    employees.level >= 3
+))
+```
+
+### Alternative Syntax
+
+The symbolic operators `&`, `|`, `~` are also supported:
+
+```python
+# Equivalent to And/Or/Not
+employees.select(where=(employees.department == "IT") & (employees.salary >= 80000))
+employees.select(where=(employees.department == "IT") | (employees.department == "HR"))
+employees.select(where=~(employees.department == "Sales"))
+```
+
+!!! warning "Use Parentheses with Symbols"
+    When using `&`, `|`, `~`, always wrap individual conditions in parentheses. Python's operator precedence may not work as expected otherwise.
 
 ## IN Operator
 

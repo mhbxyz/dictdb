@@ -1,7 +1,7 @@
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
 from .storage.backup import BackupManager
-from .core.condition import Condition
+from .core.condition import Condition, And, Or, Not
 from .core.table import Table
 from .storage.database import DictDB
 from .exceptions import (
@@ -27,6 +27,9 @@ __all__ = [
     "DictDB",
     "Table",
     "Condition",
+    "And",
+    "Or",
+    "Not",
     "Count",
     "Sum",
     "Avg",
