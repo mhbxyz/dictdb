@@ -1,5 +1,5 @@
 import operator
-from typing import Any, Literal, Optional, Dict, List, Tuple, Union
+from typing import Any, Literal, Optional, Dict, List, overload, Tuple, Union
 
 from ..exceptions import (
     SchemaValidationError,
@@ -312,17 +312,54 @@ class Table:
                     f"Field '{field}' is not defined in the schema."
                 )
 
-    def insert(self, record: Record) -> Any:
+    @overload
+    def insert(
+        self,
+        record: Record,
+        *,
+        skip_validation: bool = False,
+    ) -> Any: ...
+
+    @overload
+    def insert(
+        self,
+        record: List[Record],
+        *,
+        batch_size: Optional[int] = None,
+        skip_validation: bool = False,
+    ) -> List[Any]: ...
+
+    def insert(
+        self,
+        record: Union[Record, List[Record]],
+        *,
+        batch_size: Optional[int] = None,
+        skip_validation: bool = False,
+    ) -> Union[Any, List[Any]]:
         """
-        Inserts a new record into the table, with optional schema validation.
+        Insert one or more records into the table.
 
-        Auto-assigns a primary key if not provided. Updates indexes automatically.
+        Auto-assigns primary keys if not provided. Updates indexes automatically.
 
-        :param record: The record to insert.
-        :return: The primary key of the inserted record.
+        :param record: A single record or a list of records to insert.
+        :param batch_size: For bulk inserts, process records in batches of this size.
+                          Useful for very large datasets. Default: no batching.
+        :param skip_validation: Skip schema validation for trusted data. Default: False.
+        :return: The primary key (single record) or list of primary keys (multiple).
         :raises DuplicateKeyError: If a record with the same primary key exists.
-        :raises SchemaValidationError: If the record fails schema validation.
+        :raises SchemaValidationError: If any record fails schema validation.
+
+        For bulk inserts, the operation is atomic: if any record fails validation
+        or has a duplicate key, all inserts are rolled back.
         """
+        if isinstance(record, list):
+            return self._insert_many(
+                record, batch_size=batch_size, skip_validation=skip_validation
+            )
+        return self._insert_one(record, skip_validation=skip_validation)
+
+    def _insert_one(self, record: Record, skip_validation: bool = False) -> Any:
+        """Insert a single record."""
         logger.bind(table=self.table_name, op="INSERT").debug(
             f"[INSERT] Inserting record into '{self.table_name}'"
         )
@@ -336,21 +373,96 @@ class Table:
                     raise DuplicateKeyError(
                         f"Record with key '{key}' already exists in table '{self.table_name}'."
                     )
-                # Update counter if explicit PK is >= current counter (avoid future collisions)
                 if isinstance(key, int) and key >= self._next_pk:
                     self._next_pk = key + 1
-            if self.schema is not None:
+            if self.schema is not None and not skip_validation:
                 self.validate_record(record)
             pk = record[self.primary_key]
             self.records[pk] = record
             self._update_indexes_on_insert(record)
-            # Track for incremental backup
             self._dirty_pks.add(pk)
             self._deleted_pks.discard(pk)
         logger.bind(table=self.table_name, op="INSERT", pk=pk).info(
             "Record inserted into '{table}' (pk={pk})."
         )
         return pk
+
+    def _insert_many(
+        self,
+        records: List[Record],
+        batch_size: Optional[int] = None,
+        skip_validation: bool = False,
+    ) -> List[Any]:
+        """
+        Insert multiple records atomically.
+
+        All records are inserted in a single lock acquisition. If any record
+        fails validation or has a duplicate key, all inserts are rolled back.
+
+        :param records: List of records to insert.
+        :param batch_size: Process records in batches of this size for index updates.
+        :param skip_validation: Skip schema validation for trusted data.
+        """
+        if not records:
+            return []
+
+        logger.bind(table=self.table_name, op="INSERT", count=len(records)).debug(
+            f"[INSERT] Bulk inserting {len(records)} records into '{self.table_name}'"
+        )
+
+        inserted_pks: List[Any] = []
+        with self._lock.write_lock():
+            original_next_pk = self._next_pk
+
+            try:
+                # Phase 1: Validate all records and assign PKs
+                for record in records:
+                    # Assign PK if missing
+                    if self.primary_key not in record:
+                        record[self.primary_key] = self._next_pk
+                        self._next_pk += 1
+                    else:
+                        key = record[self.primary_key]
+                        if key in self.records or key in inserted_pks:
+                            raise DuplicateKeyError(
+                                f"Record with key '{key}' already exists in table '{self.table_name}'."
+                            )
+                        if isinstance(key, int) and key >= self._next_pk:
+                            self._next_pk = key + 1
+
+                    # Validate schema
+                    if self.schema is not None and not skip_validation:
+                        self.validate_record(record)
+
+                    pk = record[self.primary_key]
+                    inserted_pks.append(pk)
+
+                # Phase 2: Insert all records (in batches if specified)
+                effective_batch_size = batch_size or len(records)
+                for batch_start in range(0, len(records), effective_batch_size):
+                    batch_end = min(batch_start + effective_batch_size, len(records))
+                    for i in range(batch_start, batch_end):
+                        record = records[i]
+                        pk = inserted_pks[i]
+                        self.records[pk] = record
+                        self._update_indexes_on_insert(record)
+                        self._dirty_pks.add(pk)
+                        self._deleted_pks.discard(pk)
+
+            except Exception:
+                # Rollback: remove any inserted records
+                for pk in inserted_pks:
+                    if pk in self.records:
+                        self._update_indexes_on_delete(self.records[pk])
+                        del self.records[pk]
+                        self._dirty_pks.discard(pk)
+                self._next_pk = original_next_pk
+                raise
+
+        logger.bind(table=self.table_name, op="INSERT", count=len(inserted_pks)).info(
+            "Bulk inserted {count} records into '{table}'."
+        )
+        return inserted_pks
 
     def upsert(
         self,
