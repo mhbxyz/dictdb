@@ -97,3 +97,11 @@ class Field:
             lambda rec: isinstance(rec.get(self.name), str)
             and cast(str, rec.get(self.name)).endswith(suffix)
         )
+
+    def is_null(self) -> PredicateExpr:
+        """Check if the field value is None or the field is missing."""
+        return PredicateExpr(lambda rec: rec.get(self.name) is None)
+
+    def is_not_null(self) -> PredicateExpr:
+        """Check if the field value is not None and the field exists."""
+        return PredicateExpr(lambda rec: rec.get(self.name) is not None)
