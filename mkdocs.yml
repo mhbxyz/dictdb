@@ -59,9 +59,10 @@ nav:
       - Query DSL: guides/query-dsl.md
       - Indexes: guides/indexes.md
       - Schemas: guides/schemas.md
+      - Aggregations: guides/aggregations.md
+      - CSV Import/Export: guides/csv.md
       - Persistence: guides/persistence.md
       - Backups: guides/backups.md
-      - Logging: guides/logging.md
       - Concurrency: guides/concurrency.md
-      - Aggregations: guides/aggregations.md
+      - Logging: guides/logging.md
   - API Reference: api.md

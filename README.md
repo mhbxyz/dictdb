@@ -12,7 +12,7 @@
 
 ---
 
-**DictDB** is a pure Python in-memory database with SQL-like queries. Zero dependencies.
+**DictDB** is a pure Python in-memory database with SQL-like queries.
 
 ## Installation
 
@@ -24,18 +24,21 @@ pip install dctdb
 
 ## Features
 
-- **SQL-like CRUD** — `insert`, `select`, `update`, `delete`
-- **Query DSL** — `table.age >= 18`, `table.name.startswith("A")`
+- **SQL-like CRUD** — `insert`, `select`, `update`, `delete`, `upsert`
+- **Query DSL** — `table.age >= 18`, `table.name.like("A%")`, `table.salary.between(50000, 100000)`
+- **Logical operators** — `And`, `Or`, `Not` for readable complex queries
 - **Aggregations** — `Count`, `Sum`, `Avg`, `Min`, `Max` with `GROUP BY`
 - **Indexes** — Hash (O(1) lookup) and Sorted (range queries)
 - **Schemas** — Optional type validation
-- **Persistence** — JSON and Pickle formats
-- **Thread-safe** — Reader-writer locks
+- **CSV import/export** — Load from and save to CSV files
+- **Persistence** — JSON and Pickle formats with async support
+- **Automatic backups** — Periodic and incremental backup manager
+- **Thread-safe** — Reader-writer locks per table
 
 ## Quick Example
 
 ```python
-from dictdb import DictDB, Condition, Count, Avg
+from dictdb import DictDB, And, Count, Avg
 
 db = DictDB()
 db.create_table("users", primary_key="id")
@@ -45,16 +48,30 @@ users = db.get_table("users")
 users.insert({"name": "Alice", "age": 30, "dept": "IT"})
 users.insert({"name": "Bob", "age": 25, "dept": "HR"})
 
-# Query with DSL
-users.select(where=Condition(users.age >= 25))
-users.select(where=Condition(users.dept == "IT"), order_by="-age", limit=10)
+# Query with DSL (Condition wrapper is optional)
+users.select(where=users.age >= 25)
+users.select(where=users.dept == "IT", order_by="-age", limit=10)
+
+# Combine conditions with And/Or/Not
+users.select(where=And(users.dept == "IT", users.age >= 25))
 
 # Aggregations
 users.aggregate(count=Count(), avg_age=Avg("age"))
 users.aggregate(group_by="dept", count=Count())
 
 # Persistence
-db.save("data.json")
+db.save("data.json", file_format="json")
+```
+
+## CSV Import/Export
+
+```python
+# Import CSV into a new table
+db.import_csv("users.csv", "users", primary_key="id")
+
+# Export table to CSV
+users.export_csv("backup.csv")
+users.export_csv("it_dept.csv", where=users.dept == "IT")
 ```
 
 ## Documentation
