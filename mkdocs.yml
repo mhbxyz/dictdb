@@ -65,4 +65,12 @@ nav:
       - Backups: guides/backups.md
       - Concurrency: guides/concurrency.md
       - Logging: guides/logging.md
+  - Examples:
+      - Overview: examples/index.md
+      - My First Contact Book: examples/01-contact-book.md
+      - The Neighborhood Library: examples/02-library.md
+      - My Online Store: examples/03-online-store.md
+      - The Sales Manager's Dashboard: examples/04-sales-dashboard.md
+      - Legacy Data Migration: examples/05-data-migration.md
+      - Production Ready: examples/06-production-ready.md
   - API Reference: api.md
