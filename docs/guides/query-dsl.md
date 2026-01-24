@@ -154,6 +154,33 @@ Condition(files.name.like("%\\_v1%", escape="\\"))  # file_v1.txt, etc.
 !!! tip "Index Optimization"
     When a sorted index exists and the pattern starts with a literal prefix (e.g., `"ABC%"`), the query uses the index for faster lookups.
 
+## Case-Insensitive Matching
+
+All string matching methods have case-insensitive variants with an `i` prefix:
+
+```python
+# Case-insensitive equality
+Condition(employees.name.iequals("alice"))  # Matches "Alice", "ALICE", etc.
+
+# Case-insensitive contains
+Condition(employees.name.icontains("smith"))  # Matches "Smith", "SMITH", etc.
+
+# Case-insensitive prefix/suffix
+Condition(employees.name.istartswith("a"))  # Matches "Alice", "ADAM", etc.
+Condition(employees.email.iendswith("@gmail.com"))  # Matches "@Gmail.COM", etc.
+
+# Case-insensitive LIKE
+Condition(employees.name.ilike("a%"))  # Matches "Alice", "adam", "ANNA", etc.
+```
+
+| Method | Case-Insensitive Variant |
+|--------|-------------------------|
+| `==` (equality) | `iequals()` |
+| `contains()` | `icontains()` |
+| `startswith()` | `istartswith()` |
+| `endswith()` | `iendswith()` |
+| `like()` | `ilike()` |
+
 ## Sorting
 
 Sort results with `order_by`:

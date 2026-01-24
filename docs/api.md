@@ -297,6 +297,16 @@ table.field.is_null()            # Check if None or missing
 table.field.is_not_null()        # Check if not None
 ```
 
+### Case-Insensitive Methods
+
+```python
+table.field.iequals("value")     # Case-insensitive equality
+table.field.icontains("substr")  # Case-insensitive contains
+table.field.istartswith("pre")   # Case-insensitive prefix
+table.field.iendswith("suf")     # Case-insensitive suffix
+table.field.ilike("A%")          # Case-insensitive LIKE
+```
+
 ### Logical
 
 ```python

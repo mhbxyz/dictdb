@@ -91,19 +91,30 @@ class _LikeCondition:
     - Use escape character to match literal ``%`` or ``_``
     """
 
-    def __init__(self, field: str, pattern: str, escape: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        field: str,
+        pattern: str,
+        escape: Optional[str] = None,
+        case_sensitive: bool = True,
+    ) -> None:
         self.field: str = field
         self.pattern: str = pattern
         self.escape: Optional[str] = escape
+        self.case_sensitive: bool = case_sensitive
         self.prefix: Optional[str] = None  # For index optimization
 
         # Convert LIKE pattern to regex
-        self._regex = self._compile_pattern(pattern, escape)
+        self._regex = self._compile_pattern(pattern, escape, case_sensitive)
 
         # Extract prefix for index optimization (patterns like "ABC%")
-        self._extract_prefix(pattern, escape)
+        # Only for case-sensitive patterns
+        if case_sensitive:
+            self._extract_prefix(pattern, escape)
 
-    def _compile_pattern(self, pattern: str, escape: Optional[str]) -> re.Pattern[str]:
+    def _compile_pattern(
+        self, pattern: str, escape: Optional[str], case_sensitive: bool
+    ) -> re.Pattern[str]:
         """Convert LIKE pattern to compiled regex."""
         regex_parts: list[str] = []
         i = 0
@@ -131,7 +142,8 @@ class _LikeCondition:
 
         # Anchor the pattern to match the entire string
         regex_str = "^" + "".join(regex_parts) + "$"
-        return re.compile(regex_str, re.DOTALL)
+        flags = re.DOTALL if case_sensitive else re.DOTALL | re.IGNORECASE
+        return re.compile(regex_str, flags)
 
     def _extract_prefix(self, pattern: str, escape: Optional[str]) -> None:
         """Extract literal prefix for index optimization."""
@@ -353,3 +365,115 @@ class Field:
             users.select(where=Condition(users.discount.like("100\\%", escape="\\\\")))
         """
         return PredicateExpr(_LikeCondition(self.name, pattern, escape))
+
+    # --- Case-insensitive methods ---
+
+    def iequals(self, value: str) -> PredicateExpr:
+        """
+        Create a case-insensitive equality condition.
+
+        :param value: The string value to compare against (case-insensitive).
+        :return: A PredicateExpr that matches records where field equals value ignoring case.
+
+        Example::
+
+            users.select(where=Condition(users.name.iequals("alice")))
+            # Matches "Alice", "ALICE", "alice", etc.
+        """
+        value_lower = value.lower()
+
+        def _pred(rec: Dict[str, Any]) -> bool:
+            val = rec.get(self.name)
+            if not isinstance(val, str):
+                return False
+            return val.lower() == value_lower
+
+        return PredicateExpr(_pred)
+
+    def icontains(self, substring: str) -> PredicateExpr:
+        """
+        Create a case-insensitive containment condition.
+
+        :param substring: The substring to search for (case-insensitive).
+        :return: A PredicateExpr that matches records where field contains substring.
+
+        Example::
+
+            users.select(where=Condition(users.name.icontains("ali")))
+            # Matches "Alice", "ALICIA", "Tali", etc.
+        """
+        substring_lower = substring.lower()
+
+        def _pred(rec: Dict[str, Any]) -> bool:
+            val = rec.get(self.name)
+            if not isinstance(val, str):
+                return False
+            return substring_lower in val.lower()
+
+        return PredicateExpr(_pred)
+
+    def istartswith(self, prefix: str) -> PredicateExpr:
+        """
+        Create a case-insensitive prefix condition.
+
+        :param prefix: The prefix string to match against (case-insensitive).
+        :return: A PredicateExpr that matches records where field starts with prefix.
+
+        Example::
+
+            users.select(where=Condition(users.name.istartswith("a")))
+            # Matches "Alice", "ADAM", "alex", etc.
+        """
+        prefix_lower = prefix.lower()
+
+        def _pred(rec: Dict[str, Any]) -> bool:
+            val = rec.get(self.name)
+            if not isinstance(val, str):
+                return False
+            return val.lower().startswith(prefix_lower)
+
+        return PredicateExpr(_pred)
+
+    def iendswith(self, suffix: str) -> PredicateExpr:
+        """
+        Create a case-insensitive suffix condition.
+
+        :param suffix: The suffix string to match against (case-insensitive).
+        :return: A PredicateExpr that matches records where field ends with suffix.
+
+        Example::
+
+            users.select(where=Condition(users.email.iendswith("@GMAIL.COM")))
+            # Matches "user@gmail.com", "test@Gmail.Com", etc.
+        """
+        suffix_lower = suffix.lower()
+
+        def _pred(rec: Dict[str, Any]) -> bool:
+            val = rec.get(self.name)
+            if not isinstance(val, str):
+                return False
+            return val.lower().endswith(suffix_lower)
+
+        return PredicateExpr(_pred)
+
+    def ilike(self, pattern: str, escape: Optional[str] = None) -> PredicateExpr:
+        """
+        Create a case-insensitive SQL LIKE pattern matching condition.
+
+        Same as :meth:`like` but ignores case when matching.
+
+        :param pattern: The LIKE pattern to match against.
+        :param escape: Optional escape character for literal ``%`` or ``_``.
+        :return: A PredicateExpr that matches records where field matches pattern.
+
+        Example::
+
+            users.select(where=Condition(users.name.ilike("a%")))
+            # Matches "Alice", "ADAM", "alex", etc.
+
+            users.select(where=Condition(users.email.ilike("%@GMAIL.COM")))
+            # Matches "user@gmail.com", "test@Gmail.Com", etc.
+        """
+        return PredicateExpr(
+            _LikeCondition(self.name, pattern, escape, case_sensitive=False)
+        )
