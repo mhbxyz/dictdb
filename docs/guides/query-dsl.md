@@ -121,6 +121,39 @@ Condition(employees.email.endswith("@company.com"))
 Condition(employees.name.contains("Smith"))
 ```
 
+## LIKE Pattern Matching
+
+SQL-style LIKE patterns with wildcards:
+
+```python
+# % matches any sequence of characters (including empty)
+Condition(employees.name.like("A%"))           # Starts with A
+Condition(employees.email.like("%@gmail.com")) # Ends with @gmail.com
+Condition(employees.name.like("%smith%"))      # Contains smith
+
+# _ matches exactly one character
+Condition(employees.code.like("A_C"))          # Matches A1C, A2C, ABC, etc.
+Condition(employees.id.like("___"))            # Exactly 3 characters
+
+# Combine wildcards
+Condition(employees.file.like("test_.%"))      # test1.txt, test2.doc, etc.
+```
+
+### Escape Characters
+
+To match literal `%` or `_`, use an escape character:
+
+```python
+# Match strings ending with literal %
+Condition(products.discount.like("%\\%", escape="\\"))  # 10%, 20%, etc.
+
+# Match strings containing literal _
+Condition(files.name.like("%\\_v1%", escape="\\"))  # file_v1.txt, etc.
+```
+
+!!! tip "Index Optimization"
+    When a sorted index exists and the pattern starts with a literal prefix (e.g., `"ABC%"`), the query uses the index for faster lookups.
+
 ## Sorting
 
 Sort results with `order_by`:

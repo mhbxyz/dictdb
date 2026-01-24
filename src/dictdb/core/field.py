@@ -19,7 +19,8 @@ Example::
 from __future__ import annotations
 
 import operator
-from typing import Any, Callable, Dict, Iterable, cast, TYPE_CHECKING
+import re
+from typing import Any, Callable, Dict, Iterable, Optional, cast, TYPE_CHECKING
 
 from .condition import PredicateExpr
 
@@ -78,6 +79,92 @@ class _BetweenCondition:
             return bool(self.low <= val <= self.high)
         except TypeError:
             return False
+
+
+class _LikeCondition:
+    """
+    A callable class representing a SQL LIKE condition on a field.
+
+    Converts LIKE patterns to regex for matching:
+    - ``%`` matches any sequence of characters (including empty)
+    - ``_`` matches exactly one character
+    - Use escape character to match literal ``%`` or ``_``
+    """
+
+    def __init__(self, field: str, pattern: str, escape: Optional[str] = None) -> None:
+        self.field: str = field
+        self.pattern: str = pattern
+        self.escape: Optional[str] = escape
+        self.prefix: Optional[str] = None  # For index optimization
+
+        # Convert LIKE pattern to regex
+        self._regex = self._compile_pattern(pattern, escape)
+
+        # Extract prefix for index optimization (patterns like "ABC%")
+        self._extract_prefix(pattern, escape)
+
+    def _compile_pattern(self, pattern: str, escape: Optional[str]) -> re.Pattern[str]:
+        """Convert LIKE pattern to compiled regex."""
+        regex_parts: list[str] = []
+        i = 0
+        while i < len(pattern):
+            char = pattern[i]
+
+            # Check for escape character
+            if escape and char == escape and i + 1 < len(pattern):
+                # Next character is escaped - treat as literal
+                next_char = pattern[i + 1]
+                regex_parts.append(re.escape(next_char))
+                i += 2
+                continue
+
+            # LIKE wildcards
+            if char == "%":
+                regex_parts.append(".*")
+            elif char == "_":
+                regex_parts.append(".")
+            else:
+                # Escape regex special characters
+                regex_parts.append(re.escape(char))
+
+            i += 1
+
+        # Anchor the pattern to match the entire string
+        regex_str = "^" + "".join(regex_parts) + "$"
+        return re.compile(regex_str, re.DOTALL)
+
+    def _extract_prefix(self, pattern: str, escape: Optional[str]) -> None:
+        """Extract literal prefix for index optimization."""
+        prefix_chars: list[str] = []
+        i = 0
+        while i < len(pattern):
+            char = pattern[i]
+
+            # Check for escape character
+            if escape and char == escape and i + 1 < len(pattern):
+                next_char = pattern[i + 1]
+                if next_char in ("%", "_", escape):
+                    prefix_chars.append(next_char)
+                    i += 2
+                    continue
+
+            # Stop at first wildcard
+            if char in ("%", "_"):
+                break
+
+            prefix_chars.append(char)
+            i += 1
+
+        # Only set prefix if pattern ends with % after the prefix
+        # (i.e., pattern is "prefix%" or "prefix%anything")
+        if prefix_chars and i < len(pattern) and pattern[i] == "%":
+            self.prefix = "".join(prefix_chars)
+
+    def __call__(self, record: Dict[str, Any]) -> bool:
+        val = record.get(self.field)
+        if not isinstance(val, str):
+            return False
+        return self._regex.match(val) is not None
 
 
 class Field:
@@ -234,3 +321,35 @@ class Field:
             users.select(where=Condition(users.age.between(18, 65)))
         """
         return PredicateExpr(_BetweenCondition(self.name, low, high))
+
+    def like(self, pattern: str, escape: Optional[str] = None) -> PredicateExpr:
+        """
+        Create a SQL LIKE pattern matching condition.
+
+        Matches the field value against a pattern with wildcards:
+
+        - ``%`` matches any sequence of characters (including empty)
+        - ``_`` matches exactly one character
+
+        :param pattern: The LIKE pattern to match against.
+        :param escape: Optional escape character for literal ``%`` or ``_``.
+        :return: A PredicateExpr that matches records where field matches pattern.
+
+        Example::
+
+            # Starts with 'A'
+            users.select(where=Condition(users.name.like("A%")))
+
+            # Ends with '@gmail.com'
+            users.select(where=Condition(users.email.like("%@gmail.com")))
+
+            # Contains 'smith'
+            users.select(where=Condition(users.name.like("%smith%")))
+
+            # Single character wildcard: matches 'A1C', 'A2C', etc.
+            users.select(where=Condition(users.code.like("A_C")))
+
+            # Escape literal %: matches '100%'
+            users.select(where=Condition(users.discount.like("100\\%", escape="\\\\")))
+        """
+        return PredicateExpr(_LikeCondition(self.name, pattern, escape))

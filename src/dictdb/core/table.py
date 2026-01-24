@@ -36,7 +36,13 @@ from ..index import IndexBase
 from ..index.registry import create as create_index
 from ..obs.logging import logger
 from .types import Record, Schema
-from .field import Field, _FieldCondition, _IsInCondition, _BetweenCondition
+from .field import (
+    Field,
+    _FieldCondition,
+    _IsInCondition,
+    _BetweenCondition,
+    _LikeCondition,
+)
 from .rwlock import RWLock
 
 
@@ -239,6 +245,24 @@ class Table:
                     gte_pks = index.search_gte(func.low)
                     lte_pks = index.search_lte(func.high)
                     return gte_pks & lte_pks
+            return None
+
+        # Handle LIKE conditions with prefix optimization
+        if isinstance(func, _LikeCondition):
+            if func.prefix and func.field in self.indexes:
+                index = self.indexes[func.field]
+                if index.supports_range:
+                    # Use prefix to narrow down candidates via sorted index
+                    # Get all values that start with the prefix
+                    prefix = func.prefix
+                    # Find the "next" prefix for upper bound
+                    # e.g., "ABC" -> range is ["ABC", "ABD")
+                    if prefix:
+                        last_char = prefix[-1]
+                        next_prefix = prefix[:-1] + chr(ord(last_char) + 1)
+                        gte_pks = index.search_gte(prefix)
+                        lt_pks = index.search_lt(next_prefix)
+                        return gte_pks & lt_pks
             return None
 
         # Handle compound AND conditions (lambda with closure)
