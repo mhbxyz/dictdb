@@ -1,11 +1,40 @@
 [project]
 name = "dctdb"
 version = "1.1.0"
-author = "Manoah Bernier"
 description = "Pure Python in-memory database with SQL-like queries"
 readme = "README.md"
 requires-python = ">=3.13"
+license = "Apache-2.0"
+authors = [
+    { name = "Manoah Bernier", email = "manoah.bernier@gmail.com" },
+]
+keywords = [
+    "database",
+    "in-memory",
+    "dictionary",
+    "sql",
+    "query",
+    "index",
+    "orm",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/mhbxyz/dictdb"
+Documentation = "https://mhbxyz.github.io/dictdb"
+Repository = "https://github.com/mhbxyz/dictdb"
+Issues = "https://github.com/mhbxyz/dictdb/issues"
 
 [dependency-groups]
 dev = [
