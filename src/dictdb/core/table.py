@@ -363,6 +363,7 @@ class Table:
         limit: Optional[int] = None,
         offset: int = 0,
         copy: bool = True,
+        distinct: bool = False,
     ) -> List[Record]:
         """
         Retrieves records matching an optional condition.
@@ -379,6 +380,7 @@ class Table:
         :param offset: Number of records to skip from the start.
         :param copy: If True (default), return copies of records for thread safety.
                      Set to False for read-only use cases to reduce memory usage.
+        :param distinct: If True, return only unique records (first occurrence preserved).
         :return: A list of matching records.
         """
         logger.bind(table=self.table_name, op="SELECT").debug(
@@ -409,11 +411,13 @@ class Table:
         # Perform non-structural ops (ordering/projection) outside lock
         from ..query.order import order_records_with_limit
         from ..query.pager import slice_records
-        from ..query.projection import project_records
+        from ..query.projection import deduplicate_records, project_records
 
         ordered = order_records_with_limit(filtered_records, order_by, limit, offset)
         sliced_records = slice_records(ordered, limit=limit, offset=offset)
         results = project_records(sliced_records, columns)
+        if distinct:
+            results = deduplicate_records(results)
         return results
 
     def update(self, changes: Record, where: Optional[Condition] = None) -> int:
