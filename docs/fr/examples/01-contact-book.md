@@ -1,50 +1,50 @@
 # Mon premier carnet de contacts
 
-## Prologue : Une decouverte inattendue
+## Prologue : Une découverte inattendue
 
-C'etait un mardi matin comme les autres. Alex, developpeur Python depuis trois ans maintenant, sirotait son cafe en fixant l'ecran. La tache semblait assez simple : creer un carnet de contacts pour l'equipe. Rien de bien complique, mais sortir l'artillerie lourde semblait excessif. Pas de PostgreSQL, pas de SQLite. Juste quelque chose de leger et elegant.
+C'était un mardi matin comme les autres. Alex, développeur Python depuis trois ans, sirotait son café en fixant son écran. La tâche semblait simple : créer un carnet de contacts pour l'équipe. Rien de bien compliqué, mais sortir l'artillerie lourde paraissait excessif. Pas de PostgreSQL, ni de SQLite. Juste quelque chose de léger et d'élégant.
 
-C'est alors qu'Alex decouvrit DictDB.
+C'est alors qu'Alex découvrit DictDB.
 
 ## Chapitre 1 : Premiers pas
 
-Alex ouvrit le terminal et installa le paquet :
+Alex ouvrit son terminal et installa le paquet :
 
 ```bash
 pip install dctdb
 ```
 
-Puis, avec un melange de curiosite et d'excitation, les premieres lignes de code apparurent :
+Puis, mêlant curiosité et excitation, il écrivit ses premières lignes de code :
 
 ```python
 from dictdb import DictDB
 
-# Create a new database
+# Créer une nouvelle base de données
 db = DictDB()
 
-# Create a table for contacts
+# Créer une table pour les contacts
 db.create_table("contacts")
 
-# Get a reference to the table
+# Récupérer une référence vers la table
 contacts = db.get_table("contacts")
 
-print("Database created successfully!")
-print(f"Available tables: {db.list_tables()}")
+print("Base de données créée avec succès !")
+print(f"Tables disponibles : {db.list_tables()}")
 ```
 
 ```
-Database created successfully!
-Available tables: ['contacts']
+Base de données créée avec succès !
+Tables disponibles : ['contacts']
 ```
 
-« C'est tout ? » pensa Alex. « C'est vraiment aussi simple que ca ? »
+« C'est tout ? » pensa Alex. « C'est vraiment aussi simple que ça ? »
 
 ## Chapitre 2 : Ajouter des contacts
 
-Alex commenca a remplir le carnet de contacts avec les membres de l'equipe :
+Alex commença à remplir le carnet avec les membres de l'équipe :
 
 ```python
-# Add the first contact
+# Ajouter le premier contact
 contacts.insert({
     "last_name": "Dupont",
     "first_name": "Jean",
@@ -52,7 +52,7 @@ contacts.insert({
     "phone": "01-23-45-67-89"
 })
 
-# Add more contacts
+# Ajouter d'autres contacts
 contacts.insert({
     "last_name": "Martin",
     "first_name": "Sophie",
@@ -74,114 +74,114 @@ contacts.insert({
     "phone": "01-55-66-77-88"
 })
 
-print(f"Number of contacts: {contacts.count()}")
+print(f"Nombre de contacts : {contacts.count()}")
 ```
 
 ```
-Number of contacts: 4
+Nombre de contacts : 4
 ```
 
-Alex remarqua que chaque `insert` renvoyait un identifiant unique. DictDB generait automatiquement une cle primaire `id` pour chaque enregistrement.
+Alex remarqua que chaque méthode `insert` renvoyait un identifiant unique. DictDB générait automatiquement une clé primaire `id` pour chaque enregistrement.
 
 ## Chapitre 3 : Retrouver des contacts
 
-Le carnet de contacts se remplissait, mais a quoi bon stocker des donnees si on ne peut pas les retrouver ?
+Le carnet se remplissait, mais à quoi bon stocker des données si on ne peut pas les retrouver ?
 
 ```python
-# Display all contacts
+# Afficher tous les contacts
 all_contacts = contacts.select()
 
-print("=== All My Contacts ===")
+print("=== Tous mes contacts ===")
 for contact in all_contacts:
     print(f"{contact['first_name']} {contact['last_name']} - {contact['email']}")
 ```
 
 ```
-=== All My Contacts ===
+=== Tous mes contacts ===
 Jean Dupont - jean.dupont@entreprise.com
 Sophie Martin - sophie.martin@entreprise.com
 Pierre Bernard - pierre.bernard@entreprise.com
 Claire Dubois - claire.dubois@entreprise.com
 ```
 
-Alex voulait chercher un contact specifique. La puissance du DSL de requetes devint evidente :
+Alex voulait rechercher un contact spécifique. La puissance du DSL de requêtes devint alors évidente :
 
 ```python
 from dictdb import Condition
 
-# Find Sophie
+# Trouver Sophie
 sophie = contacts.select(where=Condition(contacts.first_name == "Sophie"))
-print(f"Contact found: {sophie[0]['first_name']} {sophie[0]['last_name']}")
+print(f"Contact trouvé : {sophie[0]['first_name']} {sophie[0]['last_name']}")
 
-# Find all contacts whose last name starts with 'B'
+# Trouver tous les contacts dont le nom commence par 'B'
 contacts_b = contacts.select(where=contacts.last_name.startswith("B"))
-print("\nContacts whose last name starts with B:")
+print("\nContacts dont le nom commence par B :")
 for c in contacts_b:
     print(f"  - {c['first_name']} {c['last_name']}")
 ```
 
 ```
-Contact found: Sophie Martin
+Contact trouvé : Sophie Martin
 
-Contacts whose last name starts with B:
+Contacts dont le nom commence par B :
   - Pierre Bernard
 ```
 
-!!! tip "Condition est optionnel"
-    Vous pouvez passer l'expression directement au parametre `where` sans l'envelopper dans `Condition()`. Les deux syntaxes fonctionnent !
+!!! tip "Condition est facultatif"
+    Vous pouvez passer l'expression directement au paramètre `where` sans l'envelopper dans `Condition()`. Les deux syntaxes fonctionnent !
 
-## Chapitre 4 : Mettre a jour un contact
+## Chapitre 4 : Mettre à jour un contact
 
-Un jour, Pierre Bernard changea de numero de telephone. Alex devait mettre a jour le carnet de contacts :
+Un jour, Pierre Bernard changea de numéro de téléphone. Alex dut mettre à jour le carnet :
 
 ```python
-# Update Pierre's phone number
+# Mettre à jour le numéro de téléphone de Pierre
 modified_count = contacts.update(
     {"phone": "01-99-88-77-66"},
     where=Condition(contacts.first_name == "Pierre")
 )
 
-print(f"Number of contacts modified: {modified_count}")
+print(f"Nombre de contacts modifiés : {modified_count}")
 
-# Verify the modification
+# Vérifier la modification
 pierre = contacts.select(where=contacts.first_name == "Pierre")[0]
-print(f"Pierre's new phone number: {pierre['phone']}")
+print(f"Nouveau numéro de Pierre : {pierre['phone']}")
 ```
 
 ```
-Number of contacts modified: 1
-Pierre's new phone number: 01-99-88-77-66
+Nombre de contacts modifiés : 1
+Nouveau numéro de Pierre : 01-99-88-77-66
 ```
 
 ## Chapitre 5 : Supprimer un contact
 
-Malheureusement, Jean Dupont quitta l'entreprise. Alex devait le retirer du carnet de contacts :
+Malheureusement, Jean Dupont quitta l'entreprise. Alex dut le retirer du carnet :
 
 ```python
-# Remove Jean from the contact book
+# Retirer Jean du carnet
 deleted_count = contacts.delete(where=Condition(contacts.first_name == "Jean"))
 
-print(f"Number of contacts deleted: {deleted_count}")
-print(f"Remaining contacts: {contacts.count()}")
+print(f"Nombre de contacts supprimés : {deleted_count}")
+print(f"Contacts restants : {contacts.count()}")
 ```
 
 ```
-Number of contacts deleted: 1
-Remaining contacts: 3
+Nombre de contacts supprimés : 1
+Contacts restants : 3
 ```
 
 ## Chapitre 6 : Sauvegarder son travail
 
-Alex realisa qu'il serait dommage de perdre tout ce travail. DictDB pouvait sauvegarder les donnees dans un fichier JSON :
+Alex réalisa qu'il serait dommage de perdre tout ce travail. DictDB permettait de sauvegarder les données dans un fichier JSON :
 
 ```python
-# Save the database
+# Sauvegarder la base de données
 db.save("contact_book.json", file_format="json")
 
-print("Database saved!")
+print("Base de données sauvegardée !")
 ```
 
-Le fichier JSON cree etait parfaitement lisible :
+Le fichier JSON généré était parfaitement lisible :
 
 ```json
 {
@@ -204,72 +204,72 @@ Le fichier JSON cree etait parfaitement lisible :
 }
 ```
 
-## Chapitre 7 : Reprendre la ou on s'etait arrete
+## Chapitre 7 : Reprendre là où on s'était arrêté
 
-Le lendemain matin, Alex reprit le travail. Charger la base de donnees fut un jeu d'enfant :
+Le lendemain matin, Alex reprit le travail. Charger la base de données fut un jeu d'enfant :
 
 ```python
 from dictdb import DictDB
 
-# Load the saved database
+# Charger la base de données sauvegardée
 db = DictDB.load("contact_book.json", file_format="json")
 
-# Get the contacts table
+# Récupérer la table des contacts
 contacts = db.get_table("contacts")
 
-print(f"Database loaded! {contacts.count()} contacts found.")
+print(f"Base chargée ! {contacts.count()} contacts trouvés.")
 
-# Verify everything is there
+# Vérifier que tout est là
 for contact in contacts.select():
     print(f"  - {contact['first_name']} {contact['last_name']}")
 ```
 
 ```
-Database loaded! 3 contacts found.
+Base chargée ! 3 contacts trouvés.
   - Sophie Martin
   - Pierre Bernard
   - Claire Dubois
 ```
 
-## Epilogue : Un carnet de contacts complet
+## Épilogue : Un carnet de contacts complet
 
-Alex etait satisfait. En seulement quelques lignes de code, un carnet de contacts entierement fonctionnel avait vu le jour. Voici le script complet partage avec l'equipe :
+Alex était satisfait. En seulement quelques lignes de code, un carnet de contacts entièrement fonctionnel avait vu le jour. Voici le script complet partagé avec l'équipe :
 
 ```python
 from dictdb import DictDB, Condition
 
 def main():
-    # Create or load the database
+    # Créer ou charger la base de données
     try:
         db = DictDB.load("contact_book.json", file_format="json")
-        print("Contact book loaded!")
+        print("Carnet de contacts chargé !")
     except FileNotFoundError:
         db = DictDB()
         db.create_table("contacts")
-        print("New contact book created!")
+        print("Nouveau carnet de contacts créé !")
 
     contacts = db.get_table("contacts")
 
-    # Add a new contact
+    # Ajouter un nouveau contact
     new_id = contacts.insert({
         "last_name": "Leroy",
         "first_name": "Emma",
         "email": "emma.leroy@entreprise.com",
         "phone": "01-00-11-22-33"
     })
-    print(f"Contact added with id {new_id}")
+    print(f"Contact ajouté avec l'id {new_id}")
 
-    # Display all contacts
-    print("\n=== Contact Book ===")
+    # Afficher tous les contacts
+    print("\n=== Carnet de Contacts ===")
     for contact in contacts.select(order_by="last_name"):
         print(f"{contact['first_name']} {contact['last_name']}")
-        print(f"  Email: {contact['email']}")
-        print(f"  Phone: {contact['phone']}")
+        print(f"  Email : {contact['email']}")
+        print(f"  Tél   : {contact['phone']}")
         print()
 
-    # Save
+    # Sauvegarder
     db.save("contact_book.json", file_format="json")
-    print("Contact book saved!")
+    print("Carnet de contacts sauvegardé !")
 
 if __name__ == "__main__":
     main()
@@ -277,23 +277,23 @@ if __name__ == "__main__":
 
 ## Ce que nous avons appris
 
-Dans ce tutoriel, nous avons decouvert les bases de DictDB :
+Dans ce tutoriel, nous avons découvert les bases de DictDB :
 
 | Concept | Code |
 |---------|------|
-| Creer une base de donnees | `db = DictDB()` |
-| Creer une table | `db.create_table("name")` |
-| Obtenir une table | `table = db.get_table("name")` |
-| Inserer un enregistrement | `table.insert({...})` |
-| Selectionner des enregistrements | `table.select()` |
+| Créer une base de données | `db = DictDB()` |
+| Créer une table | `db.create_table("name")` |
+| Récupérer une table | `table = db.get_table("name")` |
+| Insérer un enregistrement | `table.insert({...})` |
+| Sélectionner des enregistrements | `table.select()` |
 | Filtrer avec une condition | `table.select(where=table.field == value)` |
-| Mettre a jour des enregistrements | `table.update({...}, where=...)` |
+| Mettre à jour des enregistrements | `table.update({...}, where=...)` |
 | Supprimer des enregistrements | `table.delete(where=...)` |
 | Sauvegarder en JSON | `db.save("file.json", file_format="json")` |
 | Charger depuis JSON | `DictDB.load("file.json", file_format="json")` |
 
-## Prochaines etapes
+## Prochaines étapes
 
-Alex etait pret pour de nouveaux defis. Dans le prochain chapitre, decouvrez comment gerer plusieurs tables liees entre elles, utiliser des requetes plus avancees et optimiser les recherches.
+Alex était prêt pour de nouveaux défis. Dans le prochain chapitre, découvrez comment gérer plusieurs tables liées entre elles, utiliser des requêtes plus avancées et optimiser les recherches.
 
-[Continuer vers « La bibliotheque de quartier » &rarr;](02-library.md)
+[Continuer vers « La bibliothèque de quartier » &rarr;](02-library.md)

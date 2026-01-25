@@ -1,54 +1,54 @@
 # Exemples pratiques
 
-Bienvenue dans la section des exemples ! Ici, vous allez decouvrir DictDB a travers des cas d'utilisation concrets, presentes sous forme d'histoires progressives.
+Bienvenue dans la section des exemples ! Ici, vous allez découvrir DictDB à travers des cas d'utilisation concrets, présentés sous forme d'histoires progressives.
 
 ## Parcours d'apprentissage
 
-Chaque exemple raconte une histoire et introduit de nouvelles fonctionnalites. Suivez-les dans l'ordre pour une experience d'apprentissage graduelle, ou sautez directement a celui qui correspond a vos besoins.
+Chaque exemple raconte une histoire et introduit de nouvelles fonctionnalités. Suivez-les dans l'ordre pour une expérience d'apprentissage graduelle, ou sautez directement à celui qui correspond à vos besoins.
 
-### Niveau debutant
+### Niveau débutant
 
-| Exemple | Description | Fonctionnalites |
+| Exemple | Description | Fonctionnalités |
 |---------|-------------|-----------------|
-| [Mon premier carnet de contacts](01-contact-book.md) | Decouvrez DictDB en construisant une application simple | CRUD, persistance JSON |
-| [La bibliotheque de quartier](02-library.md) | Gerez plusieurs tables liees entre elles | Multi-tables, Query DSL, tri, pagination |
+| [Mon premier carnet de contacts](01-contact-book.md) | Découvrez DictDB en construisant une application simple | CRUD, persistance JSON |
+| [La bibliothèque de quartier](02-library.md) | Gérez plusieurs tables liées entre elles | Multi-tables, Query DSL, tri, pagination |
 
-### Niveau intermediaire
+### Niveau intermédiaire
 
-| Exemple | Description | Fonctionnalites |
+| Exemple | Description | Fonctionnalités |
 |---------|-------------|-----------------|
-| [Ma boutique en ligne](03-online-store.md) | Construisez un catalogue de produits | Schemas, index, recherche avancee, upsert |
-| [Le tableau de bord du directeur commercial](04-sales-dashboard.md) | Analysez les performances de votre equipe | Agregations, GROUP BY, statistiques |
+| [Ma boutique en ligne](03-online-store.md) | Construisez un catalogue de produits | Schémas, index, recherche avancée, upsert |
+| [Le tableau de bord du directeur commercial](04-sales-dashboard.md) | Analysez les performances de votre équipe | Agrégations, GROUP BY, statistiques |
 
-### Niveau avance
+### Niveau avancé
 
-| Exemple | Description | Fonctionnalites |
+| Exemple | Description | Fonctionnalités |
 |---------|-------------|-----------------|
-| [Migration de donnees legacy](05-data-migration.md) | Migrez des donnees depuis des fichiers CSV | Import/export CSV, transformation |
-| [Pret pour la production](06-production-ready.md) | Deploiement en production | Sauvegardes, concurrence, async, logging |
+| [Migration de données historiques](05-data-migration.md) | Migrez des données depuis des fichiers CSV | Import/export CSV, transformation |
+| [Prêt pour la production](06-production-ready.md) | Déploiement en production | Sauvegardes, concurrence, async, logging |
 
-## Fonctionnalites couvertes
+## Fonctionnalités couvertes
 
-A la fin de ce parcours d'apprentissage, vous maitriserez :
+À la fin de ce parcours d'apprentissage, vous maîtriserez :
 
 - **CRUD complet** : insert, select, update, delete, upsert
 - **Query DSL** : comparaisons, LIKE, BETWEEN, is_in, is_null
-- **Operateurs logiques** : And, Or, Not
-- **Recherche** : sensible et insensible a la casse
-- **Index** : hash et sorted pour des requetes performantes
-- **Schemas** : validation des types
-- **Agregations** : Count, Sum, Avg, Min, Max avec GROUP BY
-- **CSV** : import et export de donnees
+- **Opérateurs logiques** : And, Or, Not
+- **Recherche** : sensible et insensible à la casse
+- **Index** : hash et sorted pour des requêtes performantes
+- **Schémas** : validation des types
+- **Agrégations** : Count, Sum, Avg, Min, Max avec GROUP BY
+- **CSV** : import et export de données
 - **Persistance** : JSON et Pickle
 - **Production** : sauvegardes, concurrence, async, logging
 
 ## Comment utiliser ces exemples
 
-Chaque exemple est concu pour etre :
+Chaque exemple est conçu pour être :
 
-1. **Autonome** : vous pouvez copier-coller le code et l'executer
-2. **Progressif** : les concepts s'enchainent de maniere logique
-3. **Pratique** : base sur des cas d'utilisation reels
+1. **Autonome** : vous pouvez copier-coller le code et l'exécuter
+2. **Progressif** : les concepts s'enchaînent de manière logique
+3. **Pratique** : basé sur des cas d'utilisation réels
 
 ```python
 # Installation rapide
@@ -58,4 +58,4 @@ pip install dctdb
 from dictdb import DictDB
 ```
 
-Pret a commencer ? [Mon premier carnet de contacts](01-contact-book.md) vous attend !
+Prêt à commencer ? [Mon premier carnet de contacts](01-contact-book.md) vous attend !

@@ -1,6 +1,6 @@
 # Sauvegardes
 
-Le `BackupManager` fournit des sauvegardes automatiques périodiques et incrémentielles pour DictDB.
+Le `BackupManager` permet de mettre en place une stratégie de sauvegarde automatique, périodique et incrémentale pour vos données.
 
 ## Utilisation de base
 
@@ -10,20 +10,20 @@ from dictdb import DictDB, BackupManager
 db = DictDB()
 db.create_table("users")
 
-# Créer le gestionnaire de sauvegarde
+# Créer le gestionnaire de sauvegardes
 backup = BackupManager(
     db=db,
     backup_dir="./backups",
-    backup_interval=300,  # 5 minutes
+    backup_interval=300,  # Toutes les 5 minutes
     file_format="json"
 )
 
-# Démarrer les sauvegardes automatiques
+# Lancer le processus automatique
 backup.start()
 
 # ... votre application s'exécute ...
 
-# Arrêter à la fin
+# Arrêter proprement à la fermeture
 backup.stop()
 ```
 
@@ -34,52 +34,53 @@ backup = BackupManager(
     db=db,
     backup_dir="./backups",
 
-    # Intervalle de sauvegarde périodique en secondes (par défaut : 300)
+    # Fréquence de sauvegarde en secondes (défaut : 300)
     backup_interval=300,
 
-    # Format de fichier : "json" ou "pickle" (par défaut : "json")
+    # Format de fichier : "json" ou "pickle" (défaut : "json")
     file_format="json",
 
-    # Intervalle minimum entre les sauvegardes déclenchées par les modifications (par défaut : 5.0)
+    # Temps min entre deux sauvegardes déclenchées par modif (défaut : 5.0)
     min_backup_interval=5.0,
 
-    # Callback pour les échecs de sauvegarde
-    on_backup_failure=handle_failure,
+    # Fonction de rappel (callback) en cas d'échec
+    on_backup_failure=ma_gestion_erreur,
 
-    # Activer les sauvegardes incrémentielles (par défaut : False)
+    # Activer le mode incrémental (défaut : False)
     incremental=False,
 
-    # Nombre de deltas avant de forcer une sauvegarde complète (par défaut : 10)
+    # Nombre de deltas avant une base complète forcée (défaut : 10)
     max_deltas_before_full=10,
 )
 ```
 
 ## Sauvegardes manuelles
 
+Vous pouvez forcer une sauvegarde à tout moment :
+
 ```python
-# Sauvegarde immédiate
+# Sauvegarde immédiate (selon le mode configuré)
 backup.backup_now()
 
-# Forcer une sauvegarde complète
+# Forcer une sauvegarde complète (indépendamment du mode)
 backup.backup_full()
 
-# Forcer une sauvegarde delta (mode incrémentiel)
+# Forcer une sauvegarde delta (en mode incrémental uniquement)
 backup.backup_delta()
 ```
 
-## Notification de modification
+## Signalement de modifications
 
-Déclencher une sauvegarde après des modifications significatives :
+Vous pouvez prévenir le gestionnaire d'un changement important pour qu'il planifie une sauvegarde :
 
 ```python
-# Notifier d'une modification significative
-# Respecte min_backup_interval pour éviter les E/S excessives
+# Déclenche une sauvegarde en respectant min_backup_interval
 backup.notify_change()
 ```
 
-## Sauvegardes incrémentielles
+## Sauvegardes incrémentales
 
-Le mode incrémentiel ne sauvegarde que les modifications depuis la dernière sauvegarde :
+En mode incrémental, DictDB n'enregistre que ce qui a changé depuis la dernière fois.
 
 ```python
 backup = BackupManager(
@@ -92,11 +93,11 @@ backup = BackupManager(
 
 **Fonctionnement :**
 
-1. Les fichiers delta contiennent uniquement les enregistrements insérés, mis à jour et supprimés
-2. Après `max_deltas_before_full` deltas, une sauvegarde complète est créée
-3. Les sauvegardes complètes réinitialisent le compteur de deltas
+1. Les fichiers "delta" ne contiennent que les lignes créées, modifiées ou supprimées.
+2. Après `max_deltas_before_full` deltas, une sauvegarde complète est générée automatiquement pour "remettre les compteurs à zéro".
+3. Les sauvegardes complètes réinitialisent le nombre de deltas.
 
-**Structure du fichier delta :**
+**Structure d'un fichier delta :**
 
 ```json
 {
@@ -104,133 +105,62 @@ backup = BackupManager(
   "timestamp": 1234567890.123456,
   "tables": {
     "users": {
-      "upserts": [
-        {"id": 1, "name": "Alice"}
-      ],
+      "upserts": [{"id": 1, "name": "Alice"}],
       "deletes": [2, 3]
     }
   }
 }
 ```
 
-## Gestion des échecs
+## Surveillance et erreurs
 
-Gérer les échecs de sauvegarde avec un callback :
+Le `BackupManager` vous permet de garder un œil sur la santé de vos données :
 
 ```python
-def handle_failure(error: Exception, consecutive_failures: int):
-    print(f"Échec de la sauvegarde ({consecutive_failures}x) : {error}")
+def ma_gestion_erreur(error: Exception, consecutive_failures: int):
+    print(f"Échec de sauvegarde ({consecutive_failures}x) : {error}")
     if consecutive_failures >= 3:
-        send_alert("Le système de sauvegarde échoue !")
+        alerte_admin("Le système de sauvegarde est en panne !")
 
-backup = BackupManager(
-    db=db,
-    backup_dir="./backups",
-    on_backup_failure=handle_failure,
-)
+backup = BackupManager(..., on_backup_failure=ma_gestion_erreur)
+
+# Vérifier l'état actuel
+print(f"Échecs consécutifs : {backup.consecutive_failures}")
+print(f"Deltas accumulés   : {backup.deltas_since_full}")
 ```
 
-Surveiller le nombre d'échecs :
+## Nommage des fichiers
 
-```python
-if backup.consecutive_failures > 0:
-    print(f"Attention : {backup.consecutive_failures} échecs consécutifs")
-```
+Les fichiers sont nommés avec un timestamp précis à la microseconde :
 
-## Nommage des fichiers de sauvegarde
-
-Les fichiers sont nommés avec des horodatages à la microseconde près :
-
-- Sauvegardes complètes : `dictdb_backup_1234567890_123456.json`
-- Sauvegardes delta : `dictdb_delta_1234567890_123456.json`
-
-## Surveillance de l'état
-
-```python
-# Vérifier les échecs consécutifs
-backup.consecutive_failures  # 0
-
-# Vérifier les deltas depuis la dernière sauvegarde complète (mode incrémentiel)
-backup.deltas_since_full  # 3
-```
-
-## Exemple : Configuration de production
-
-```python
-import logging
-from pathlib import Path
-from dictdb import DictDB, BackupManager
-
-# Configurer les chemins
-BACKUP_DIR = Path("./data/backups")
-BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-
-# Initialiser la base de données
-db = DictDB()
-db.create_table("events", primary_key="event_id")
-
-# Gestionnaire d'échecs avec journalisation
-def on_failure(error: Exception, count: int):
-    logging.error(f"Échec de la sauvegarde ({count}x) : {error}")
-    if count >= 5:
-        logging.critical("Échecs de sauvegarde multiples - vérifiez l'espace disque !")
-
-# Créer le gestionnaire de sauvegarde
-backup = BackupManager(
-    db=db,
-    backup_dir=BACKUP_DIR,
-    backup_interval=60,  # Chaque minute
-    file_format="json",
-    min_backup_interval=10.0,
-    on_backup_failure=on_failure,
-    incremental=True,
-    max_deltas_before_full=20,
-)
-
-# Démarrer les sauvegardes
-backup.start()
-
-try:
-    # Logique applicative
-    events = db.get_table("events")
-
-    # Après des opérations par lots, déclencher une sauvegarde
-    for i in range(100):
-        events.insert({"event_id": i, "type": "click"})
-    backup.notify_change()
-
-finally:
-    # Assurer une sauvegarde finale à l'arrêt
-    backup.backup_full()
-    backup.stop()
-```
+- Base complète : `dictdb_backup_1234567890_123456.json`
+- Delta : `dictdb_delta_1234567890_123456.json`
 
 ## Restauration à partir des sauvegardes
 
-Charger la sauvegarde complète la plus récente :
+Pour restaurer, chargez d'abord la base complète la plus récente :
 
 ```python
 from pathlib import Path
+from dictdb import DictDB
 
 backup_dir = Path("./backups")
 
-# Trouver la dernière sauvegarde complète
+# Trouver la dernière base complète
 full_backups = sorted(backup_dir.glob("dictdb_backup_*.json"))
 if full_backups:
     latest = full_backups[-1]
     db = DictDB.load(str(latest), file_format="json")
 ```
 
-Pour les sauvegardes incrémentielles, appliquer les deltas dans l'ordre :
+Pour les sauvegardes incrémentales, appliquez les deltas dans l'ordre chronologique :
 
 ```python
 from dictdb.storage.persist import apply_delta
 
-# Charger la sauvegarde de base
-db = DictDB.load("dictdb_backup_base.json", file_format="json")
-
-# Appliquer les deltas dans l'ordre chronologique
+# Appliquer tous les deltas parus après la sauvegarde complète choisie
 for delta_file in sorted(backup_dir.glob("dictdb_delta_*.json")):
-    affected = apply_delta(db, delta_file)
-    print(f"Appliqué {delta_file.name} : {affected} enregistrements")
+    # (Logique de filtrage par date à prévoir ici)
+    nb_touches = apply_delta(db, delta_file)
+    print(f"Delta appliqué : {delta_file.name} ({nb_touches} lignes)")
 ```

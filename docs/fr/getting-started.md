@@ -1,4 +1,4 @@
-# Premiers pas
+# Guide de démarrage
 
 ## Installation
 
@@ -10,10 +10,10 @@ pip install dctdb
 from dictdb import DictDB, Condition
 ```
 
-!!! remarque "Nom du paquet"
-    Le paquet PyPI est `dctdb`, mais le nom d'import est `dictdb`.
+!!! note "Nom du paquet"
+    Le paquet sur PyPI est nommé `dctdb`, mais le nom à utiliser pour l'import est `dictdb`.
 
-### Configuration pour le développement
+### Installation pour le développement
 
 Clonez le dépôt et installez les dépendances :
 
@@ -29,7 +29,7 @@ Ou manuellement avec [uv](https://docs.astral.sh/uv/) :
 uv sync
 ```
 
-### Depuis les sources
+### Installation depuis les sources
 
 ```bash
 pip install -e .
@@ -64,32 +64,32 @@ products = db.get_table("products")
 ```python
 # Clé primaire générée automatiquement
 users.insert({"name": "Alice", "email": "alice@example.com"})
-# Retourne : 1 (l'id généré automatiquement)
+# Retourne : 1 (l'identifiant généré automatiquement)
 
 # Clé primaire explicite
 users.insert({"id": 100, "name": "Bob", "email": "bob@example.com"})
 
-# Champ de clé primaire personnalisé
+# Champ de clé primaire personnalisé (sku)
 products.insert({"sku": "ABC123", "name": "Widget", "price": 9.99})
 ```
 
-### Sélectionner des enregistrements
+### Sélectionner des données
 
 ```python
 from dictdb import Condition
 
 # Sélectionner tous les enregistrements
-all_users = users.select()
+tous_les_utilisateurs = users.select()
 
 # Sélectionner avec une condition
 admins = users.select(where=Condition(users.role == "admin"))
 
 # Sélectionner des colonnes spécifiques
-names = users.select(columns=["name", "email"])
+noms = users.select(columns=["name", "email"])
 
-# Tri
-sorted_users = users.select(order_by="name")
-sorted_desc = users.select(order_by="-name")  # Ordre décroissant
+# Tri des résultats
+utilisateurs_tries = users.select(order_by="name")
+ordre_decroissant = users.select(order_by="-name")
 
 # Pagination
 page = users.select(order_by="id", limit=10, offset=20)
@@ -116,13 +116,13 @@ users.delete(where=Condition(users.name == "Bob"))
 # Retourne le nombre d'enregistrements supprimés
 ```
 
-### Persistance
+### Persistance (Sauvegarde et Chargement)
 
 ```python
-# Sauvegarder en JSON (lisible par l'humain)
+# Sauvegarder au format JSON (lisible)
 db.save("database.json", file_format="json")
 
-# Sauvegarder en Pickle (plus rapide, binaire)
+# Sauvegarder au format Pickle (plus rapide, binaire)
 db.save("database.pkl", file_format="pickle")
 
 # Charger depuis un fichier
@@ -132,13 +132,13 @@ db = DictDB.load("database.json", file_format="json")
 ## Opérations sur les tables
 
 ```python
-# Lister toutes les tables
+# Lister toutes les tables de la base
 db.list_tables()  # ["users", "products"]
 
 # Obtenir les métadonnées d'une table
 users.count()           # Nombre d'enregistrements
 users.columns()         # Liste des noms de colonnes
-users.primary_key_name()  # "id"
+users.primary_key_name()  # Nom de la clé primaire ("id")
 
 # Supprimer une table
 db.drop_table("products")
@@ -166,15 +166,15 @@ except DuplicateTableError:
     print("La table existe déjà")
 
 try:
-    users.delete(where=Condition(users.name == "NonExistent"))
+    users.delete(where=Condition(users.name == "Inconnu"))
 except RecordNotFoundError:
-    print("Aucun enregistrement correspondant trouvé")
+    print("Aucun enregistrement ne correspond aux critères")
 ```
 
 ## Prochaines étapes
 
-- [DSL de requête](guides/query-dsl.md) - Apprenez la syntaxe complète des requêtes
-- [Index](guides/indexes.md) - Accélérez les requêtes avec des index
-- [Schémas](guides/schemas.md) - Ajoutez la validation de type
-- [Persistance](guides/persistence.md) - Sauvegardez et chargez des bases de données
-- [Sauvegardes](guides/backups.md) - Gestion automatique des sauvegardes
+- [DSL de requête](guides/query-dsl.md) - Maîtrisez toute la syntaxe de filtrage.
+- [Index](guides/indexes.md) - Accélérez vos recherches sur de gros volumes.
+- [Schémas](guides/schemas.md) - Ajoutez une validation de type stricte.
+- [Persistance](guides/persistence.md) - Sauvegardez et restaurez vos données.
+- [Sauvegardes](guides/backups.md) - Gérez vos sauvegardes automatiques.

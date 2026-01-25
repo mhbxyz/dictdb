@@ -1,18 +1,18 @@
 # Persistance
 
-DictDB prend en charge la sauvegarde et le chargement des bases de données sur disque aux formats JSON ou Pickle.
+DictDB permet de sauvegarder l'intégralité de vos bases de données sur le disque et de les recharger ultérieurement aux formats JSON ou Pickle.
 
 ## Sauvegarde
 
 ### Format JSON
 
-Format lisible par l'humain, adapté au débogage et à l'interopérabilité :
+C'est un format lisible par l'humain, idéal pour le débogage, l'édition manuelle ou l'interopérabilité avec d'autres outils.
 
 ```python
 db.save("database.json", file_format="json")
 ```
 
-Structure de sortie JSON :
+Structure du fichier JSON :
 
 ```json
 {
@@ -31,14 +31,14 @@ Structure de sortie JSON :
 
 ### Format Pickle
 
-Format binaire, plus rapide et prenant en charge tous les types Python :
+C'est un format binaire natif à Python. Il est beaucoup plus rapide et gère nativement tous les types d'objets Python.
 
 ```python
 db.save("database.pkl", file_format="pickle")
 ```
 
-!!! avertissement "Sécurité"
-    Les fichiers Pickle peuvent exécuter du code arbitraire lors du chargement. Ne chargez que des fichiers pickle provenant de sources fiables. DictDB utilise un désérialiseur restreint qui n'autorise que les classes figurant sur une liste blanche.
+!!! warning "Sécurité"
+    Le format Pickle peut exécuter du code arbitraire lors du chargement. Ne chargez que des fichiers provenant de sources sûres. DictDB utilise un dé-sérialiseur restreint pour limiter les risques.
 
 ## Chargement
 
@@ -50,147 +50,81 @@ db = DictDB.load("database.json", file_format="json")
 db = DictDB.load("database.pkl", file_format="pickle")
 ```
 
-## E/S asynchrones
+## Entrées/Sorties asynchrones (Async I/O)
 
-Pour les opérations non bloquantes dans les applications asynchrones :
+Pour vos applications web ou asynchrones, utilisez les méthodes dédiées pour ne pas bloquer votre application :
 
 ```python
 import asyncio
 
-async def save_and_load():
-    # Sauvegarde asynchrone
+async def ma_logique():
+    # Sauvegarde en arrière-plan
     await db.async_save("database.json", file_format="json")
 
-    # Chargement asynchrone
+    # Chargement en arrière-plan
     db = await DictDB.async_load("database.json", file_format="json")
 ```
 
-Ces méthodes exécutent les opérations d'E/S dans un pool de threads pour éviter de bloquer la boucle d'événements.
+Ces méthodes utilisent un pool de threads pour gérer l'écriture disque sans geler la boucle d'événements.
 
 ## Comparaison des formats
 
 | Caractéristique | JSON | Pickle |
 |-----------------|------|--------|
 | Lisible par l'humain | Oui | Non |
-| Vitesse | Plus lent | Plus rapide |
-| Taille du fichier | Plus grande | Plus petite |
-| Types Python | Limités | Tous |
-| Sécurité | Sûr | Restreint |
-| Interopérabilité | Élevée | Python uniquement |
+| Vitesse | Modérée | Très rapide |
+| Taille de fichier | Importante | Compacte |
+| Types supportés | Limités | Tous (Python) |
+| Sécurité | Élevée | Restreinte |
+| Interopérabilité | Excellente | Python uniquement |
 
-## Ce qui est persisté
+## Ce qui est conservé
 
-**Sauvegardé :**
+**Éléments sauvegardés :**
 
-- Toutes les tables et leurs noms
-- Configuration de la clé primaire
-- Définitions de schéma
-- Tous les enregistrements
+- Toutes les tables et leurs noms.
+- La configuration de la clé primaire.
+- Les définitions des schémas.
+- L'intégralité des enregistrements.
 
-**Non sauvegardé :**
+**Éléments perdus (à recréer) :**
 
-- Index (à recréer après le chargement)
-- État d'exécution (verrous, suivi des modifications)
+- Les index (à recréer après chargement).
+- L'état d'exécution (verrous en cours, suivi des modifs temporaires).
 
-## Recréation des index après le chargement
+## Persistance des schémas
 
-```python
-# Sauvegarde
-employees.create_index("department")
-db.save("data.json", file_format="json")
-
-# Chargement
-db = DictDB.load("data.json", file_format="json")
-employees = db.get_table("employees")
-
-# Les index doivent être recréés
-employees.create_index("department")
-```
-
-## Persistance du schéma
-
-Les schémas sont entièrement préservés :
+Les schémas de données sont intégralement conservés et restaurés. Si vous aviez imposé des types stricts, ils seront de nouveau opérationnels après le chargement.
 
 ```python
-# Création avec schéma
-schema = {"id": int, "name": str, "score": float}
+schema = {"id": int, "score": float}
 db.create_table("players", schema=schema)
 
-# Sauvegarde et chargement
 db.save("game.json", file_format="json")
+# Plus tard...
 db = DictDB.load("game.json", file_format="json")
-
-# Le schéma est restauré
-players = db.get_table("players")
-print(players.schema)  # {"id": int, "name": str, "score": float}
+# Le schéma est de nouveau là
+print(db.get_table("players").schema)
 ```
 
-## Écritures en flux continu
+## Écritures en flux (Streaming)
 
-Pour les grandes bases de données, les sauvegardes JSON utilisent le streaming pour réduire l'utilisation de la mémoire :
-
-```python
-# Grande base de données
-for i in range(100000):
-    users.insert({"name": f"User {i}"})
-
-# Écriture en streaming - ne charge pas toute la BD en mémoire
-db.save("large.json", file_format="json")
-```
+Pour les bases de données volumineuses, l'export JSON utilise un mécanisme de streaming afin de réduire l'empreinte mémoire lors de l'écriture sur le disque.
 
 ## Gestion des erreurs
 
 ```python
 from pathlib import Path
 
-# Fichier non trouvé
+# Fichier inexistant
 try:
-    db = DictDB.load("missing.json", file_format="json")
+    db = DictDB.load("introuvable.json", file_format="json")
 except FileNotFoundError:
-    print("Fichier de base de données non trouvé")
+    print("Le fichier spécifié est introuvable.")
 
-# Format invalide
+# Format non supporté
 try:
     db.save("data.txt", file_format="xml")
 except ValueError as e:
     print(e)  # Unsupported file_format. Please use 'json' or 'pickle'.
-```
-
-## Types de chemins
-
-Les chaînes de caractères et les objets `Path` sont acceptés :
-
-```python
-from pathlib import Path
-
-# Chemin sous forme de chaîne
-db.save("data.json", file_format="json")
-
-# Objet Path
-db.save(Path("data") / "database.json", file_format="json")
-```
-
-## Exemple
-
-```python
-from dictdb import DictDB, Condition
-
-# Créer et remplir la base de données
-db = DictDB()
-db.create_table("config", primary_key="key")
-config = db.get_table("config")
-
-config.insert({"key": "version", "value": "1.0.0"})
-config.insert({"key": "debug", "value": True})
-config.insert({"key": "max_connections", "value": 100})
-
-# Sauvegarder en JSON pour édition manuelle
-db.save("config.json", file_format="json")
-
-# Plus tard : charger et utiliser
-db = DictDB.load("config.json", file_format="json")
-config = db.get_table("config")
-
-version = config.select(where=Condition(config.key == "version"))[0]["value"]
-print(f"Version: {version}")
 ```

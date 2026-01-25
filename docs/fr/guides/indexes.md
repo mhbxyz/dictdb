@@ -1,128 +1,115 @@
 # Index
 
-Les index accélèrent les requêtes en évitant les parcours complets de table. DictDB supporte deux types d'index.
+Les index permettent d'accélérer considérablement vos requêtes en évitant de parcourir toute la table ligne par ligne (Full Table Scan). DictDB propose deux types d'index adaptés à différents besoins.
 
-## Types d'Index
+## Types d'index
 
-### Index Hash
+### Index de hachage (Hash Index)
 
-Les index hash fournissent des recherches en O(1) pour les conditions d'égalité :
+L'index de hachage offre une recherche en temps constant O(1) pour les conditions d'égalité.
 
 ```python
 employees.create_index("department", index_type="hash")
 
-# Cette requête utilise l'index - O(1) au lieu de O(n)
+# Cette requête utilisera l'index -> O(1) au lieu de O(n)
 employees.select(where=Condition(employees.department == "IT"))
 ```
 
-Idéal pour :
+**Idéal pour :**
 
-- Comparaisons d'égalité (`==`)
-- Conditions `is_in()`
-- Champs à haute cardinalité (beaucoup de valeurs uniques)
+- Les comparaisons d'égalité exacte (`==`).
+- Les conditions `is_in()`.
+- Les colonnes ayant beaucoup de valeurs uniques (haute cardinalité).
 
-### Index Trié
+### Index trié (Sorted Index)
 
-Les index triés supportent à la fois les requêtes d'égalité et de plage :
+L'index trié supporte à la fois les recherches d'égalité et les recherches par plage de valeurs.
 
 ```python
 employees.create_index("salary", index_type="sorted")
 
-# Égalité - utilise l'index
+# Égalité : utilise l'index
 employees.select(where=Condition(employees.salary == 75000))
 
-# Requêtes de plage - utilise l'index
+# Plages : utilise l'index
 employees.select(where=Condition(employees.salary > 70000))
-employees.select(where=Condition(employees.salary <= 80000))
-employees.select(where=Condition(employees.salary >= 60000))
+employees.select(where=Condition(employees.salary.between(60000, 80000)))
 ```
 
-Idéal pour :
+**Idéal pour :**
 
-- Requêtes de plage (`<`, `<=`, `>`, `>=`)
-- Accès ordonné aux données
-- Champs utilisés dans `order_by`
+- Les requêtes de plage (`<`, `<=`, `>`, `>=`).
+- Les tris de données.
+- Les colonnes utilisées dans `order_by`.
 
-## Création d'Index
+## Création des index
 
 ```python
-# Index hash (par défaut)
+# Par défaut, c'est un index Hash qui est créé
 employees.create_index("department")
 employees.create_index("department", index_type="hash")
 
-# Index trié
+# Création d'un index trié
 employees.create_index("salary", index_type="sorted")
 ```
 
-Les index sont automatiquement mis à jour lors de l'insertion, la mise à jour ou la suppression d'enregistrements.
+Les index sont maintenus à jour automatiquement lors de chaque insertion, modification ou suppression d'enregistrement.
 
-## Vérification des Index
+## Vérifier l'état des index
 
 ```python
-# Lister les champs indexés
+# Lister tous les champs indexés d'une table
 employees.indexed_fields()  # ["department", "salary"]
 
-# Vérifier si un champ est indexé
+# Vérifier si un champ précis possède un index
 employees.has_index("department")  # True
-employees.has_index("name")  # False
+employees.has_index("name")        # False
 ```
 
-## Utilisation des Index
+## Utilisation automatique
 
-DictDB utilise automatiquement les index lorsque c'est possible :
+DictDB détecte et utilise intelligemment les index disponibles sans action de votre part :
 
 ```python
-# Utilise l'index (égalité sur un champ indexé)
+# Utilise l'index (égalité sur champ indexé)
 employees.select(where=Condition(employees.department == "IT"))
 
-# Utilise l'index (plage sur un index trié)
+# Utilise l'index (plage sur index trié)
 employees.select(where=Condition(employees.salary > 70000))
 
-# Utilise l'index (is_in sur un champ indexé)
-employees.select(where=Condition(employees.department.is_in(["IT", "HR"])))
-
-# Parcours complet de table (pas d'index sur "name")
+# Scan complet car pas d'index sur "name"
 employees.select(where=Condition(employees.name == "Alice"))
 ```
 
-### Conditions Composées
+### Conditions combinées
 
-Pour les conditions AND, l'index est utilisé pour réduire les candidats :
+Pour les conditions liées par un `AND`, l'index est utilisé pour restreindre immédiatement le nombre de candidats potentiels, rendant le filtrage final beaucoup plus rapide.
 
-```python
-employees.create_index("department")
+## Considérations de performance
 
-# Utilise l'index department, puis filtre par salary
-employees.select(
-    where=Condition((employees.department == "IT") & (employees.salary > 70000))
-)
-```
+### Quand indexer ?
 
-## Considérations de Performance
+- Sur les colonnes présentes fréquemment dans vos clauses `where`.
+- Sur les colonnes ayant une forte sélectivité (peu de lignes correspondant à une même valeur).
+- Sur les colonnes servant de pivots pour des tris (index trié recommandé).
 
-### Quand Utiliser les Index
+### Quand éviter d'indexer ?
 
-- Champs fréquemment utilisés dans les conditions `where`
-- Champs avec haute sélectivité (peu de correspondances par valeur)
-- Champs de requêtes de plage (utilisez un index trié)
+- Sur les petites tables (moins de 100 lignes), car le gain est négligeable.
+- Sur les colonnes très rarement consultées.
+- Sur les colonnes subissant énormément de modifications par seconde (chaque mise à jour d'index a un coût CPU).
 
-### Quand Éviter les Index
+### Consommation mémoire
 
-- Tables avec peu d'enregistrements (< 100)
-- Champs rarement interrogés
-- Champs mis à jour très fréquemment
+Gardez à l'esprit que les index résident en mémoire vive :
 
-### Surcharge Mémoire
-
-Les index consomment de la mémoire supplémentaire :
-
-- Index hash : ~O(n) pour n enregistrements
-- Index trié : ~O(n) avec surcharge de structure d'arbre
+- L'index Hash consomme environ O(n).
+- L'index trié consomme un peu plus de mémoire en raison de sa structure en arbre.
 
 ## Persistance
 
-!!! avertissement "Les Index ne sont pas Persistés"
-    Les index ne sont pas sauvegardés lors de l'utilisation de `db.save()`. Après le chargement d'une base de données, recréez les index si nécessaire :
+!!! warning "Les index ne sont pas sauvegardés"
+    Par souci de légèreté des fichiers, les index ne sont pas inclus lors d'un `db.save()`. Vous devez les recréer après chaque chargement de la base.
 
 ```python
 # Sauvegarde
@@ -131,36 +118,7 @@ db.save("data.json", file_format="json")
 # Chargement
 db = DictDB.load("data.json", file_format="json")
 
-# Recréation des index
+# Recréation manuelle nécessaire
 employees = db.get_table("employees")
 employees.create_index("department")
-employees.create_index("salary", index_type="sorted")
-```
-
-## Exemple
-
-```python
-from dictdb import DictDB, Condition
-
-db = DictDB()
-db.create_table("orders", primary_key="order_id")
-orders = db.get_table("orders")
-
-# Création des index
-orders.create_index("customer_id")  # Hash pour les recherches d'égalité
-orders.create_index("total", index_type="sorted")  # Trié pour les requêtes de plage
-orders.create_index("status")  # Hash pour le filtrage par statut
-
-# Insertion des données
-for i in range(10000):
-    orders.insert({
-        "customer_id": i % 100,
-        "total": 10 + (i * 0.5),
-        "status": "completed" if i % 3 == 0 else "pending"
-    })
-
-# Requêtes rapides utilisant les index
-customer_orders = orders.select(where=Condition(orders.customer_id == 42))
-large_orders = orders.select(where=Condition(orders.total > 1000))
-pending = orders.select(where=Condition(orders.status == "pending"))
 ```

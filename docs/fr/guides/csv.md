@@ -1,79 +1,76 @@
 # Import/Export CSV
 
-DictDB supporte l'importation de données depuis des fichiers CSV et l'exportation des résultats de requêtes vers CSV.
+DictDB permet d'importer facilement des données depuis des fichiers CSV vers des tables, et d'exporter vos résultats de requêtes au format CSV.
 
-## Importation de Fichiers CSV
+## Importer des fichiers CSV
 
-Utilisez `DictDB.import_csv()` pour créer une nouvelle table à partir d'un fichier CSV :
+Utilisez `DictDB.import_csv()` pour créer automatiquement une nouvelle table à partir d'un fichier :
 
 ```python
 from dictdb import DictDB
 
 db = DictDB()
 
-# Import basique
-db.import_csv("users.csv", "users", primary_key="id")
+# Import simple
+db.import_csv("utilisateurs.csv", "users", primary_key="id")
 
-# Accéder aux données importées
+# Accéder aux données
 users = db.get_table("users")
-print(users.count())  # Nombre d'enregistrements importés
+print(f"Importé {users.count()} lignes")
 ```
 
-### Options d'Import
+### Options d'importation
 
 ```python
 db.import_csv(
-    "data.csv",
+    "produits.csv",
     "products",
-    primary_key="id",
-    delimiter=";",           # Délimiteur personnalisé (par défaut : ",")
-    has_header=True,         # La première ligne est l'en-tête (par défaut : True)
-    encoding="utf-8",        # Encodage du fichier (par défaut : "utf-8")
-    schema={"id": int, "price": float, "name": str},  # Conversion de types
-    infer_types=True,        # Détection automatique des types (par défaut : True)
-    skip_validation=False,   # Ignorer la validation du schéma (par défaut : False)
+    primary_key="sku",
+    delimiter=";",           # Séparateur personnalisé (défaut : ",")
+    has_header=True,         # Indique si la 1ère ligne est l'en-tête (défaut : True)
+    encoding="utf-8",        # Encodage du fichier (défaut : "utf-8")
+    schema={"id": int, "price": float},  # Forcer le typage de colonnes
+    infer_types=True,        # Détection automatique des types (défaut : True)
+    skip_validation=False,   # Ignorer la validation du schéma (défaut : False)
 )
 ```
 
-### Inférence de Types
+### Inférence automatique des types
 
-Par défaut, DictDB infère automatiquement les types de colonnes :
+Par défaut, DictDB tente de deviner le meilleur type pour chaque colonne :
 
-- Les valeurs entières (`"42"`) deviennent `int`
-- Les valeurs décimales (`"3.14"`) deviennent `float`
-- Tout le reste reste `str`
+- Les entiers (`"42"`) deviennent des `int`.
+- Les décimaux (`"3.14"`) deviennent des `float`.
+- Le reste demeure en `str`.
 
 ```python
 # Contenu CSV : id,price,name
 #               1,19.99,Widget
 
-db.import_csv("products.csv", "products")
-products = db.get_table("products")
-rec = products.select()[0]
+db.import_csv("data.csv", "data")
+rec = db.get_table("data").select()[0]
 
 print(type(rec["id"]))     # <class 'int'>
 print(type(rec["price"]))  # <class 'float'>
-print(type(rec["name"]))   # <class 'str'>
 ```
 
-### Schéma Explicite
+### Utilisation d'un schéma explicite
 
-Pour un contrôle précis, fournissez un schéma explicite :
+Pour un contrôle total, vous pouvez fournir un dictionnaire de typage :
 
 ```python
 schema = {
     "id": int,
     "price": float,
-    "name": str,
-    "active": bool,  # Analyse "true"/"false", "1"/"0", "yes"/"no"
+    "active": bool,  # Interprète "true", "false", "1", "0", "yes", "no", "oui", "non"
 }
 
-db.import_csv("products.csv", "products", schema=schema)
+db.import_csv("data.csv", "data", schema=schema)
 ```
 
-## Exportation vers CSV
+## Exporter au format CSV
 
-Utilisez `Table.export_csv()` pour écrire des enregistrements dans un fichier CSV :
+Utilisez `Table.export_csv()` pour enregistrer vos données :
 
 ```python
 from dictdb import DictDB
@@ -83,101 +80,50 @@ db.create_table("users")
 users = db.get_table("users")
 
 users.insert({"id": 1, "name": "Alice", "email": "alice@example.com"})
-users.insert({"id": 2, "name": "Bob", "email": "bob@example.com"})
 
-# Exporter tous les enregistrements
-users.export_csv("users_backup.csv")
+# Tout exporter
+users.export_csv("sauvegarde_users.csv")
 ```
 
-### Exportation avec Filtrage
+### Exporter avec filtrage
 
 ```python
-# Exporter uniquement les utilisateurs actifs
-users.export_csv("active_users.csv", where=users.status == "active")
+# Exporter seulement les membres actifs
+users.export_csv("actifs.csv", where=users.status == "active")
 
-# Exporter en utilisant And/Or/Not
+# Exporter avec une condition complexe
 from dictdb import And
-
-users.export_csv(
-    "it_seniors.csv",
-    where=And(users.department == "IT", users.years >= 5)
-)
+users.export_csv("cible.csv", where=And(users.age >= 18, users.pays == "FR"))
 ```
 
-### Exporter des Colonnes Spécifiques
+### Sélection des colonnes
 
 ```python
-# Exporter uniquement les colonnes name et email
+# Exporter uniquement le nom et l'e-mail
 users.export_csv("contacts.csv", columns=["name", "email"])
 ```
 
-### Exporter des Résultats Pré-calculés
+### Exporter des résultats pré-calculés
 
 ```python
-# D'abord calculer les résultats, puis exporter
-results = users.select(
-    columns=["name", "email"],
-    where=users.age >= 18,
-    order_by="name"
-)
+# Calculer d'abord les résultats (ex: triés), puis exporter
+resultats = users.select(where=users.age >= 18, order_by="name")
 
-users.export_csv("adults.csv", records=results)
+users.export_csv("export_trie.csv", records=resultats)
 ```
 
-### Options d'Exportation
+## Gestion des caractères spéciaux
+
+DictDB gère automatiquement les cas complexes (présence de virgules, de guillemets ou de sauts de ligne à l'intérieur des données) en respectant les standards du format CSV.
+
+## Erreurs courantes
 
 ```python
-users.export_csv(
-    "export.csv",
-    columns=["id", "name", "email"],  # Sélection et ordre des colonnes
-    where=users.active == True,       # Condition de filtrage
-    delimiter=";",                     # Délimiteur personnalisé
-    encoding="utf-8",                  # Encodage du fichier
-)
-```
-
-## Exemple Aller-Retour
-
-```python
-from dictdb import DictDB
-
-# Import depuis CSV
-db = DictDB()
-db.import_csv("original.csv", "data", primary_key="id")
-
-# Modifier les données
-data = db.get_table("data")
-data.update({"status": "processed"}, where=data.status == "pending")
-
-# Exporter vers CSV
-data.export_csv("processed.csv")
-```
-
-## Gestion des Caractères Spéciaux
-
-Les fichiers CSV avec des virgules, guillemets ou sauts de ligne dans les valeurs de champs sont gérés automatiquement :
-
-```python
-# Cela fonctionne correctement
-users.insert({"id": 1, "name": "O'Brien, Jr.", "bio": 'Says "Hello"'})
-users.export_csv("users.csv")
-
-# La réimportation préserve les valeurs
-db2 = DictDB()
-db2.import_csv("users.csv", "users2")
-```
-
-## Gestion des Erreurs
-
-```python
-from dictdb import DictDB
 from dictdb.exceptions import DuplicateTableError
 
-db = DictDB()
-db.create_table("users")
-
 try:
-    db.import_csv("users.csv", "users")  # La table existe déjà
+    # L'import échouera si la table existe déjà dans la base
+    db.import_csv("data.csv", "une_table_existante")
 except DuplicateTableError as e:
     print(f"Erreur : {e}")
 ```

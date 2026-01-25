@@ -1,10 +1,10 @@
 # Schémas
 
-Les schémas fournissent une validation de type pour les enregistrements de table. Lorsqu'un schéma est défini, toutes les opérations d'insertion et de mise à jour valident les enregistrements par rapport à celui-ci.
+Les schémas permettent d'imposer une validation de type stricte sur les enregistrements d'une table. Lorsqu'un schéma est défini, chaque insertion ou mise à jour est vérifiée pour garantir l'intégrité des données.
 
-## Définition d'un Schéma
+## Définir un schéma
 
-Un schéma est un dictionnaire associant les noms de champs aux types Python :
+Un schéma se définit sous la forme d'un dictionnaire associant le nom des colonnes aux types Python :
 
 ```python
 schema = {
@@ -18,130 +18,97 @@ schema = {
 db.create_table("users", primary_key="id", schema=schema)
 ```
 
-## Types Supportés
+## Types supportés
 
-Les schémas supportent les types Python standard :
+DictDB accepte les types Python standards suivants :
 
-- `str` - Chaînes de caractères
-- `int` - Entiers
-- `float` - Nombres à virgule flottante
-- `bool` - Booléens
-- `list` - Listes (tout contenu)
-- `dict` - Dictionnaires (tout contenu)
+- `str` - Chaînes de caractères.
+- `int` - Nombres entiers.
+- `float` - Nombres à virgule flottante.
+- `bool` - Booléens.
+- `list` - Listes (quel que soit leur contenu).
+- `dict` - Dictionnaires (quel que soit leur contenu).
 
-## Comportement de Validation
+## Comportement de la validation
 
-### Champs Obligatoires
+### Champs obligatoires
 
-Tous les champs du schéma sont obligatoires :
+Dès qu'un schéma est présent, tous les champs qu'il définit deviennent **obligatoires**.
 
 ```python
-schema = {"id": int, "name": str, "email": str}
+schema = {"id": int, "name": str}
 db.create_table("users", schema=schema)
 users = db.get_table("users")
 
-# Un champ manquant lève une erreur
-users.insert({"id": 1, "name": "Alice"})
-# SchemaValidationError: Missing field 'email' as defined in schema.
+# Ceci lèvera une erreur car 'name' manque
+users.insert({"id": 1})
+# SchemaValidationError: Missing field 'name' as defined in schema.
 ```
 
-### Vérification de Type
+### Vérification du type
 
-Les valeurs des champs doivent correspondre au type attendu :
+Le type de chaque valeur est scrupuleusement vérifié :
 
 ```python
-# Un type incorrect lève une erreur
-users.insert({"id": "one", "name": "Alice", "email": "alice@example.com"})
+# Erreur : 'id' attend un entier, pas une chaîne
+users.insert({"id": "un", "name": "Alice"})
 # SchemaValidationError: Field 'id' expects type 'int', got 'str'.
 ```
 
-### Champs Supplémentaires
+### Champs interdits
 
-Les champs absents du schéma sont rejetés :
+Tout champ non mentionné dans le schéma sera rejeté lors de l'insertion.
 
 ```python
-users.insert({"id": 1, "name": "Alice", "email": "alice@example.com", "phone": "123"})
+# Erreur : 'phone' n'est pas dans le schéma
+users.insert({"id": 1, "name": "Alice", "phone": "0123"})
 # SchemaValidationError: Field 'phone' is not defined in the schema.
 ```
 
-## Clé Primaire dans le Schéma
+## Clé primaire et schéma
 
-Si la clé primaire n'est pas dans le schéma, elle est automatiquement ajoutée comme `int` :
+Si vous oubliez d'inclure votre clé primaire dans le dictionnaire du schéma, DictDB l'ajoutera automatiquement avec le type `int`. Les identifiants auto-générés continueront donc de fonctionner normalement.
 
-```python
-schema = {"name": str, "email": str}
-db.create_table("users", primary_key="id", schema=schema)
+## Validation des mises à jour
 
-# "id" est automatiquement ajouté au schéma comme int
-# Les IDs auto-générés fonctionnent comme prévu
-users.insert({"name": "Alice", "email": "alice@example.com"})  # id=1
-```
-
-## Validation des Mises à Jour
-
-Les mises à jour sont également validées par rapport au schéma :
+La validation s'applique aussi à la méthode `update()` :
 
 ```python
-# Une mise à jour invalide lève une erreur
-users.update({"age": "thirty"}, where=Condition(users.name == "Alice"))
-# SchemaValidationError: Field 'age' expects type 'int', got 'str'.
+# Erreur : 'age' doit être un entier
+users.update({"age": "trente"}, where=Condition(users.id == 1))
 ```
 
-Les mises à jour sont atomiques - si la validation échoue, aucun enregistrement n'est modifié.
+L'opération de mise à jour est atomique : si la validation échoue sur un seul enregistrement du lot, aucun changement n'est appliqué à la base.
 
-## Introspection du Schéma
+## Consulter le schéma
 
 ```python
-# Obtenir les noms des champs du schéma
-users.schema_fields()  # ["id", "name", "email"]
+# Liste des champs attendus
+users.schema_fields()  # ["id", "name", "age"]
 
-# Accéder au schéma complet
-users.schema  # {"id": int, "name": str, "email": str}
+# Accès au dictionnaire complet
+print(users.schema)
 ```
 
-## Tables Sans Schéma
+## Tables sans schéma
 
-Sans schéma, les tables acceptent n'importe quelle structure d'enregistrement :
-
-```python
-db.create_table("flexible")
-flexible = db.get_table("flexible")
-
-# N'importe quels champs sont autorisés
-flexible.insert({"x": 1})
-flexible.insert({"a": "hello", "b": [1, 2, 3], "c": {"nested": True}})
-```
+Si vous ne spécifiez pas de schéma, la table accepte n'importe quelle structure de données. C'est le mode "dictionnaire pur", idéal pour le prototypage rapide ou les données très hétérogènes.
 
 ## Persistance
 
-Les schémas sont préservés lors de la sauvegarde et du chargement :
+Les schémas sont sauvegardés dans les fichiers JSON ou Pickle. Lorsque vous rechargez votre base, les contraintes de type sont immédiatement rétablies.
+
+## Exemple complet
 
 ```python
-schema = {"id": int, "name": str, "score": float}
-db.create_table("players", schema=schema)
-
-# Sauvegarde
-db.save("game.json", file_format="json")
-
-# Chargement - le schéma est restauré
-db = DictDB.load("game.json", file_format="json")
-players = db.get_table("players")
-players.schema  # {"id": int, "name": str, "score": float}
-```
-
-## Exemple
-
-```python
-from dictdb import DictDB, Condition, SchemaValidationError
+from dictdb import DictDB, SchemaValidationError
 
 db = DictDB()
 
-# Définition du schéma
 product_schema = {
     "sku": str,
     "name": str,
     "price": float,
-    "quantity": int,
     "active": bool,
 }
 
@@ -150,28 +117,20 @@ products = db.get_table("products")
 
 # Insertion valide
 products.insert({
-    "sku": "ABC123",
-    "name": "Widget",
-    "price": 19.99,
-    "quantity": 100,
+    "sku": "TV-001",
+    "name": "Télévision 4K",
+    "price": 499.99,
     "active": True,
 })
 
-# Erreurs de validation
+# Exemple d'erreur capturée
 try:
     products.insert({
-        "sku": "DEF456",
-        "name": "Gadget",
-        "price": "cheap",  # Devrait être un float
-        "quantity": 50,
+        "sku": "RD-002",
+        "name": "Radio",
+        "price": "gratuit",  # Doit être un float !
         "active": True,
     })
 except SchemaValidationError as e:
-    print(e)  # Field 'price' expects type 'float', got 'str'.
-
-# Mise à jour avec validation
-products.update(
-    {"quantity": 150},
-    where=Condition(products.sku == "ABC123")
-)
+    print(f"Données invalides : {e}")
 ```

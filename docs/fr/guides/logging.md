@@ -1,48 +1,48 @@
-# Journalisation
+# Journalisation (Logging)
 
-DictDB inclut un système de journalisation intégré avec une API compatible loguru.
+DictDB intègre un système de journalisation complet, compatible avec l'API de `loguru`.
 
 ## Démarrage rapide
 
 ```python
 from dictdb import configure_logging
 
-# Activer la journalisation niveau info vers la console
+# Activer les logs de niveau INFO vers la console
 configure_logging(level="INFO", console=True)
 ```
 
-## Configuration
+## Configuration complète
 
 ```python
 configure_logging(
-    # Niveau de journalisation minimum : DEBUG, INFO, WARNING, ERROR, CRITICAL
+    # Niveau minimum : DEBUG, INFO, WARNING, ERROR, CRITICAL
     level="INFO",
 
-    # Journaliser vers stdout (par défaut : True)
+    # Afficher dans la console (défaut : True)
     console=True,
 
-    # Journaliser vers un fichier (optionnel)
+    # Écrire dans un fichier (optionnel)
     logfile="dictdb.log",
 
-    # Format de sortie JSON (par défaut : False)
+    # Sortie au format JSON (défaut : False)
     json=False,
 
-    # Échantillonner les messages DEBUG : journaliser 1 sur N (optionnel)
+    # Échantillonnage : ne logue qu'un message DEBUG sur N (optionnel)
     sample_debug_every=10,
 )
 ```
 
-## Niveaux de journalisation
+## Niveaux de logs
 
 | Niveau | Description |
 |--------|-------------|
-| `DEBUG` | Informations détaillées des opérations (requêtes, utilisation des index) |
-| `INFO` | Opérations normales (insertions, mises à jour, sauvegardes) |
-| `WARNING` | Problèmes potentiels |
+| `DEBUG` | Détails techniques (requêtes, utilisation des index) |
+| `INFO` | Opérations courantes (insertions, sauvegardes) |
+| `WARNING` | Alertes sur des comportements potentiellement problématiques |
 | `ERROR` | Échecs d'opérations |
-| `CRITICAL` | Erreurs graves |
+| `CRITICAL` | Erreurs système graves |
 
-## Format de sortie
+## Formats de sortie
 
 ### Console (colorée)
 
@@ -63,145 +63,79 @@ configure_logging(
 
 ## Accès direct au logger
 
+Vous pouvez utiliser le logger interne pour vos propres messages :
+
 ```python
 from dictdb import logger
 
-# Journalisation directe
-logger.info("Message personnalisé")
-logger.debug("Informations de débogage")
-logger.warning("Message d'avertissement")
-logger.error("Une erreur s'est produite")
+# Message simple
+logger.info("Mon message personnalisé")
 
-# Journalisation contextuelle avec bind()
-log = logger.bind(component="MyApp", user_id=123)
-log.info("Action utilisateur effectuée")
+# Ajout de contexte avec bind()
+log = logger.bind(component="MonApp", user_id=123)
+log.info("Action effectuée par l'utilisateur")
 ```
 
-## Handlers personnalisés
+## Gestionnaires personnalisés (Handlers)
 
 ```python
 from dictdb import logger
 import sys
 
-# Supprimer les handlers par défaut
+# Supprimer les sorties par défaut
 logger.remove()
 
-# Ajouter un handler stdout personnalisé
-logger.add(
-    sink=sys.stdout,
-    level="INFO",
-    serialize=False,  # Lisible par l'humain
-)
+# Ajouter une sortie console lisible
+logger.add(sys.stdout, level="INFO", serialize=False)
 
-# Ajouter un handler fichier avec JSON
-logger.add(
-    sink="app.log",
-    level="DEBUG",
-    serialize=True,  # Format JSON
-)
-
-# Ajouter un handler fonction personnalisé
-def my_handler(message: str):
-    # Envoyer vers un service externe, etc.
-    print(f"PERSONNALISÉ : {message}")
-
-logger.add(sink=my_handler, level="ERROR")
+# Ajouter une sortie fichier en JSON pour un outil d'agrégation (ex: ELK)
+logger.add("app.log", level="DEBUG", serialize=True)
 ```
 
-## Filtrage
+## Échantillonnage en production
+
+Pour éviter de saturer vos fichiers de logs en production tout en gardant une visibilité sur le débogage :
 
 ```python
-# Fonction de filtre
-def only_errors(record):
-    return record["level"].name in ("ERROR", "CRITICAL")
-
-logger.add(
-    sink="errors.log",
-    level="DEBUG",
-    filter=only_errors,
-)
-```
-
-## Échantillonnage du débogage
-
-Réduire le volume des logs DEBUG en production :
-
-```python
-# Journaliser seulement 1 message DEBUG sur 100
+# Ne journalise qu'un message DEBUG sur 100
 configure_logging(
     level="DEBUG",
     sample_debug_every=100,
 )
 ```
 
-## Ce qui est journalisé
+## Ce qui est journalisé par DictDB
 
 ### Opérations de base de données
 
 ```
 INFO  | component=DictDB | Initialized an empty DictDB instance.
 INFO  | component=DictDB op=CREATE_TABLE table=users pk=id | Created table 'users'
-INFO  | component=DictDB op=DROP_TABLE table=users | Dropped table 'users'
 ```
 
-### Opérations de table
+### Opérations sur les tables
 
 ```
 DEBUG | table=users op=INSERT | Inserting record into 'users'
 INFO  | table=users op=INSERT pk=1 | Record inserted into 'users' (pk=1)
 INFO  | table=users op=UPDATE count=3 | Updated 3 record(s) in 'users'
-INFO  | table=users op=DELETE count=1 | Deleted 1 record(s) from 'users'
-```
-
-### Opérations d'index
-
-```
-INFO  | table=users op=INDEX field=email index_type=hash | Index created on field 'email'
-```
-
-### Persistance
-
-```
-INFO  | component=DictDB op=SAVE tables=2 records=100 format=json path=data.json | Saving database
-INFO  | component=DictDB op=LOAD path=data.json format=json tables=2 records=100 | Loaded database
 ```
 
 ### Gestionnaire de sauvegarde
 
 ```
-INFO  | Starting automatic backup manager.
 INFO  | Performing full backup to dictdb_backup_123.json
-INFO  | Delta backup saved successfully (3/10 deltas)
 ERROR | Backup failed (2 consecutive): Permission denied
 ```
 
-## Exemple : Configuration de production
-
-```python
-from dictdb import DictDB, configure_logging
-
-# Configurer pour la production
-configure_logging(
-    level="INFO",
-    console=True,
-    logfile="/var/log/dictdb/app.log",
-    json=True,  # Journalisation structurée pour l'agrégation des logs
-)
-
-# Application
-db = DictDB()
-db.create_table("events")
-# Toutes les opérations sont maintenant journalisées
-```
-
-## Désactiver la journalisation
+## Désactiver les logs
 
 ```python
 from dictdb import logger
 
-# Supprimer tous les handlers
+# Supprimer tous les gestionnaires
 logger.remove()
 
-# Ou configurer sans sorties
+# Ou configurer au niveau critique uniquement
 configure_logging(level="CRITICAL", console=False)
 ```

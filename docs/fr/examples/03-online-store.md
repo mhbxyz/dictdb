@@ -2,83 +2,83 @@
 
 ## Introduction
 
-Sophie avait toujours reve de transformer sa passion pour l'artisanat en activite commerciale. Apres des mois de preparation, de nuits blanches a concevoir son site web et d'innombrables visites sur les marches d'artisans locaux, elle etait enfin prete a lancer « Les Tresors de Sophie » - une boutique en ligne specialisee dans la decoration interieure et les cadeaux artisanaux.
+Sophie avait toujours rêvé de transformer sa passion pour l'artisanat en activité commerciale. Après des mois de préparation, de nuits blanches à concevoir son site web et d'innombrables visites sur les marchés d'artisans locaux, elle était enfin prête à lancer « Les Trésors de Sophie » - une boutique en ligne spécialisée dans la décoration intérieure et les cadeaux artisanaux.
 
-Mais avant de pouvoir vendre son premier produit, Sophie faisait face a un defi que beaucoup de nouveaux entrepreneurs rencontrent : comment gerer un catalogue de produits qui doit etre fiable, consultable et facile a mettre a jour ? Elle avait besoin d'un systeme capable de :
+Mais avant de pouvoir vendre son premier produit, Sophie faisait face à un défi que beaucoup de nouveaux entrepreneurs rencontrent : comment gérer un catalogue de produits qui doit être fiable, facilement consultable et facile à mettre à jour ? Elle avait besoin d'un système capable de :
 
-- S'assurer que chaque produit possede des informations completes et correctement typees
-- Trouver rapidement des produits par categorie ou gamme de prix
-- Gerer des recherches clients complexes
-- Rendre les mises a jour de stock transparentes
+- S'assurer que chaque produit possède des informations complètes et correctement typées
+- Trouver rapidement des produits par catégorie ou gamme de prix
+- Gérer des recherches clients complexes
+- Rendre les mises à jour de stock transparentes
 
 Suivons Sophie dans la construction de son catalogue de produits avec DictDB.
 
-## Creer le catalogue avec validation de schema
+## Créer le catalogue avec validation de schéma
 
-Sophie commence par definir la structure de ses produits. Elle veut s'assurer que chaque article possede toutes les informations requises et que les types de donnees sont corrects - plus question d'entrer accidentellement « quinze euros » au lieu de 15.00.
+Sophie commence par définir la structure de ses produits. Elle veut s'assurer que chaque article possède toutes les informations requises et que les types de données sont corrects - plus question d'entrer accidentellement « quinze euros » au lieu de 15.00.
 
 ```python
 from dictdb import DictDB, Condition, And, Or, Not
 
-# Sarah creates her database
+# Sophie crée sa base de données
 db = DictDB()
 
-# Define the product schema
+# Définir le schéma du produit
 product_schema = {
-    "sku": str,           # Unique product reference
-    "name": str,          # Product name
-    "description": str,   # Detailed description
-    "category": str,      # Product category
-    "price": float,       # Price in dollars
-    "stock": int,         # Quantity in stock
-    "active": bool,       # Available for sale
+    "sku": str,           # Référence unique du produit
+    "name": str,          # Nom du produit
+    "description": str,   # Description détaillée
+    "category": str,      # Catégorie du produit
+    "price": float,       # Prix en euros
+    "stock": int,         # Quantité en stock
+    "active": bool,       # Disponible à la vente
 }
 
-# Create the table with schema validation
+# Créer la table avec validation de schéma
 db.create_table("products", primary_key="sku", schema=product_schema)
 products = db.get_table("products")
 ```
 
-Maintenant, si Sophie essaie d'inserer un produit incomplet ou avec des types de donnees incorrects, DictDB detectera l'erreur immediatement :
+Maintenant, si Sophie essaie d'insérer un produit incomplet ou avec des types de données incorrects, DictDB détectera l'erreur immédiatement :
 
 ```python
 from dictdb import SchemaValidationError
 
-# Attempting to insert an incomplete product
+# Tentative d'insertion d'un produit incomplet
 try:
     products.insert({
         "sku": "DEC001",
-        "name": "Lavender Candle",
-        # Missing: description, category, price, stock, and active!
+        "name": "Bougie Lavande",
+        # Manquant : description, category, price, stock, et active !
     })
 except SchemaValidationError as e:
-    print(f"Error: {e}")
-    # Error: Missing field 'description' as defined in schema.
+    print(f"Erreur : {e}")
+    # Erreur : Missing field 'description' as defined in schema.
 
-# Attempting to insert with incorrect type
+# Tentative d'insertion avec un type incorrect
 try:
     products.insert({
         "sku": "DEC001",
-        "name": "Lavender Candle",
-        "description": "Handcrafted lavender-scented candle",
+        "name": "Bougie Lavande",
+        "description": "Bougie artisanale",
         "category": "Decor",
-        "price": "fifteen dollars",  # Should be a float!
+        "price": "quinze euros",  # Devrait être un flottant !
         "stock": 50,
         "active": True,
     })
 except SchemaValidationError as e:
-    print(f"Error: {e}")
-    # Error: Field 'price' expects type 'float', got 'str'.
+    print(f"Erreur : {e}")
+    # Erreur : Field 'price' expects type 'float', got 'str'.
 ```
 
-Avec la validation de schema en place, Sophie peut ajouter ses produits en toute confiance :
+Avec la validation de schéma en place, Sophie peut ajouter ses produits en toute confiance :
 
 ```python
-# Adding the first products
+# Ajouter les premiers produits
 products.insert({
     "sku": "DEC001",
-    "name": "Bougie Parfumee Lavande",
-    "description": "Bougie artisanale a la lavande de Provence",
+    "name": "Bougie Parfumée Lavande",
+    "description": "Bougie artisanale à la lavande de Provence",
     "category": "Decor",
     "price": 15.90,
     "stock": 50,
@@ -87,8 +87,8 @@ products.insert({
 
 products.insert({
     "sku": "DEC002",
-    "name": "Vase Ceramique Bleu",
-    "description": "Vase fait main en ceramique emaillee bleue",
+    "name": "Vase Céramique Bleu",
+    "description": "Vase fait main en céramique émaillée bleue",
     "category": "Decor",
     "price": 45.00,
     "stock": 12,
@@ -97,8 +97,8 @@ products.insert({
 
 products.insert({
     "sku": "GFT001",
-    "name": "Coffret The Bio",
-    "description": "Assortiment de 5 thes bio dans un coffret en bois",
+    "name": "Coffret Thé Bio",
+    "description": "Assortiment de 5 thés bio dans un coffret en bois",
     "category": "Cadeaux",
     "price": 29.90,
     "stock": 30,
@@ -108,7 +108,7 @@ products.insert({
 products.insert({
     "sku": "GFT002",
     "name": "Carnet en Cuir",
-    "description": "Carnet artisanal avec couverture en cuir veritable",
+    "description": "Carnet artisanal avec couverture en cuir véritable",
     "category": "Cadeaux",
     "price": 35.00,
     "stock": 25,
@@ -117,8 +117,8 @@ products.insert({
 
 products.insert({
     "sku": "DEC003",
-    "name": "Miroir Boheme",
-    "description": "Miroir rond avec cadre en macrame fait main",
+    "name": "Miroir Bohème",
+    "description": "Miroir rond avec cadre en macramé fait main",
     "category": "Decor",
     "price": 89.00,
     "stock": 8,
@@ -128,17 +128,17 @@ products.insert({
 products.insert({
     "sku": "ART001",
     "name": "Kit Peinture Aquarelle",
-    "description": "Kit complet pour debutants en peinture aquarelle",
+    "description": "Kit complet pour débutants en peinture aquarelle",
     "category": "Loisirs",
     "price": 55.00,
     "stock": 0,
-    "active": False,  # Out of stock
+    "active": False,  # Rupture de stock
 })
 
 products.insert({
     "sku": "GFT003",
-    "name": "Bouquet de Fleurs Sechees",
-    "description": "Bouquet compose de fleurs naturelles sechees",
+    "name": "Bouquet de Fleurs Séchées",
+    "description": "Bouquet composé de fleurs naturelles séchées",
     "category": "Cadeaux",
     "price": 42.50,
     "stock": 15,
@@ -147,49 +147,49 @@ products.insert({
 
 products.insert({
     "sku": "DEC004",
-    "name": "Coussin Velours Emeraude",
-    "description": "Coussin decoratif en velours vert emeraude",
+    "name": "Coussin Velours Émeraude",
+    "description": "Coussin décoratif en velours vert émeraude",
     "category": "Decor",
     "price": 32.00,
     "stock": 20,
     "active": True,
 })
 
-print(f"Catalog created with {products.count()} products!")
-# Catalog created with 8 products!
+print(f"Catalogue créé avec {products.count()} produits !")
+# Catalogue créé avec 8 produits !
 ```
 
 ## Optimiser les recherches avec les index
 
-A mesure que la boutique de Sophie grandit, elle veut s'assurer que les recherches restent rapides. Elle cree des index sur les champs les plus frequemment recherches par les clients.
+À mesure que la boutique de Sophie grandit, elle veut s'assurer que les recherches restent rapides. Elle crée des index sur les champs les plus fréquemment recherchés par les clients.
 
 ```python
-# Hash index for category searches (exact equality)
+# Index hash pour les recherches de catégorie (égalité exacte)
 products.create_index("category", index_type="hash")
 
-# Sorted index for price searches (range queries)
+# Index trié pour les recherches de prix (requêtes de plage)
 products.create_index("price", index_type="sorted")
 
-# Check which fields are indexed
-print(f"Indexed fields: {products.indexed_fields()}")
-# Indexed fields: ['category', 'price']
+# Vérifier quels champs sont indexés
+print(f"Champs indexés : {products.indexed_fields()}")
+# Champs indexés : ['category', 'price']
 ```
 
 **Pourquoi deux types d'index ?**
 
-- **Index hash** : Parfait pour les recherches d'egalite (`category == "Decor"`). Fournit des recherches en temps constant O(1).
-- **Index trie** : Ideal pour les recherches par plage (`price >= 20` et `price <= 50`). Fournit des recherches en temps logarithmique O(log n).
+- **Index hash** : Parfait pour les recherches d'égalité (`category == "Decor"`). Fournit des recherches en temps constant O(1).
+- **Index trié** : Idéal pour les recherches par plage (`price >= 20` et `price <= 50`). Fournit des recherches en temps logarithmique O(log n).
 
-## Requetes avancees avec And, Or, Not
+## Requêtes avancées avec And, Or, Not
 
-Les clients de Sophie ont des besoins varies. Voyons comment elle peut repondre a leurs demandes de recherche.
+Les clients de Sophie ont des besoins variés. Voyons comment elle peut répondre à leurs demandes de recherche.
 
 ### Combiner des conditions avec And
 
-Un client cherche des articles de decoration a moins de 50 euros :
+Un client cherche des articles de décoration à moins de 50 euros :
 
 ```python
-# Decor products under 50 euros
+# Produits de décoration à moins de 50 euros
 results = products.select(
     where=And(
         products.category == "Decor",
@@ -199,21 +199,21 @@ results = products.select(
     order_by="price"
 )
 
-print("Decor under 50 euros:")
+print("Décoration à moins de 50 euros :")
 for p in results:
-    print(f"  - {p['name']}: {p['price']} euros")
-# Decor under 50 euros:
-#   - Bougie Parfumee Lavande: 15.9 euros
-#   - Coussin Velours Emeraude: 32.0 euros
-#   - Vase Ceramique Bleu: 45.0 euros
+    print(f"  - {p['name']} : {p['price']} €")
+# Décoration à moins de 50 euros :
+#   - Bougie Parfumée Lavande : 15.9 €
+#   - Coussin Velours Émeraude : 32.0 €
+#   - Vase Céramique Bleu : 45.0 €
 ```
 
-### Utiliser Or pour elargir la recherche
+### Utiliser Or pour élargir la recherche
 
-Un client hesite entre la decoration et les cadeaux :
+Un client hésite entre la décoration et les cadeaux :
 
 ```python
-# Products in Decor OR Cadeaux categories
+# Produits dans les catégories Décor OU Cadeaux
 results = products.select(
     where=And(
         Or(
@@ -225,16 +225,16 @@ results = products.select(
     order_by="category"
 )
 
-print(f"Decor and Cadeaux: {len(results)} products available")
-# Decor and Cadeaux: 7 products available
+print(f"Décor et Cadeaux : {len(results)} produits disponibles")
+# Décor et Cadeaux : 7 produits disponibles
 ```
 
 ### Exclure avec Not
 
-Un client veut tout sauf la decoration :
+Un client veut tout sauf la décoration :
 
 ```python
-# Everything except decor
+# Tout sauf la décoration
 results = products.select(
     where=And(
         Not(products.category == "Decor"),
@@ -242,32 +242,32 @@ results = products.select(
     )
 )
 
-print("Products outside Decor:")
+print("Produits hors Décoration :")
 for p in results:
     print(f"  - [{p['category']}] {p['name']}")
-# Products outside Decor:
-#   - [Cadeaux] Coffret The Bio
+# Produits hors Décoration :
+#   - [Cadeaux] Coffret Thé Bio
 #   - [Cadeaux] Carnet en Cuir
-#   - [Cadeaux] Bouquet de Fleurs Sechees
+#   - [Cadeaux] Bouquet de Fleurs Séchées
 ```
 
-### Conditions imbriquees complexes
+### Conditions imbriquées complexes
 
-Un client a un budget de 30 a 50 euros et cherche un cadeau OU un article de decoration premium :
+Un client a un budget de 30 à 50 euros et cherche un cadeau OU un article de décoration premium :
 
 ```python
-# Complex query
+# Requête complexe
 results = products.select(
     where=And(
         products.active == True,
         Or(
-            # Gifts between 30 and 50 euros
+            # Cadeaux entre 30 et 50 euros
             And(
                 products.category == "Cadeaux",
                 products.price >= 30,
                 products.price <= 50
             ),
-            # OR premium decor (over 80 euros)
+            # OU décor premium (plus de 80 euros)
             And(
                 products.category == "Decor",
                 products.price >= 80
@@ -276,21 +276,21 @@ results = products.select(
     )
 )
 
-print("Cadeaux 30-50 euros ou Decor Premium:")
+print("Cadeaux 30-50€ ou Décor Premium :")
 for p in results:
-    print(f"  - {p['name']} ({p['category']}): {p['price']} euros")
-# Cadeaux 30-50 euros ou Decor Premium:
-#   - Carnet en Cuir (Cadeaux): 35.0 euros
-#   - Bouquet de Fleurs Sechees (Cadeaux): 42.5 euros
-#   - Miroir Boheme (Decor): 89.0 euros
+    print(f"  - {p['name']} ({p['category']}) : {p['price']} €")
+# Cadeaux 30-50€ ou Décor Premium :
+#   - Carnet en Cuir (Cadeaux) : 35.0 €
+#   - Bouquet de Fleurs Séchées (Cadeaux) : 42.5 €
+#   - Miroir Bohème (Decor) : 89.0 €
 ```
 
 ## Recherche par plage de prix avec BETWEEN
 
-Sophie a souvent besoin de filtrer par gamme de prix. La methode `between()` simplifie ces recherches.
+Sophie a souvent besoin de filtrer par gamme de prix. La méthode `between()` simplifie ces recherches.
 
 ```python
-# Products between 25 and 45 euros (inclusive)
+# Produits entre 25 et 45 euros (inclus)
 results = products.select(
     where=And(
         products.price.between(25, 45),
@@ -299,163 +299,163 @@ results = products.select(
     order_by="price"
 )
 
-print("Products between 25 and 45 euros:")
+print("Produits entre 25 et 45 € :")
 for p in results:
-    print(f"  - {p['name']}: {p['price']} euros")
-# Products between 25 and 45 euros:
-#   - Coffret The Bio: 29.9 euros
-#   - Coussin Velours Emeraude: 32.0 euros
-#   - Carnet en Cuir: 35.0 euros
-#   - Bouquet de Fleurs Sechees: 42.5 euros
-#   - Vase Ceramique Bleu: 45.0 euros
+    print(f"  - {p['name']} : {p['price']} €")
+# Produits entre 25 et 45 € :
+#   - Coffret Thé Bio : 29.9 €
+#   - Coussin Velours Émeraude : 32.0 €
+#   - Carnet en Cuir : 35.0 €
+#   - Bouquet de Fleurs Séchées : 42.5 €
+#   - Vase Céramique Bleu : 45.0 €
 ```
 
-La methode `between()` est equivalente a `(price >= 25) & (price <= 45)`, mais plus lisible et optimisee lors de l'utilisation d'un index trie.
+La méthode `between()` est équivalente à `(price >= 25) & (price <= 45)`, mais plus lisible et optimisée lors de l'utilisation d'un index trié.
 
 ## Recherche textuelle avec LIKE
 
-Les clients utilisent souvent la barre de recherche. Sophie implemente une recherche basee sur des motifs.
+Les clients utilisent souvent la barre de recherche. Sophie implémente une recherche basée sur des motifs.
 
 ```python
-# Search for products starting with "Bougie" or "Bouquet"
+# Rechercher des produits commençant par "Bougie" ou "Bouquet"
 results = products.select(
     where=products.name.like("Bou%")
 )
 
-print("Products starting with 'Bou':")
+print("Produits commençant par 'Bou' :")
 for p in results:
     print(f"  - {p['name']}")
-# Products starting with 'Bou':
-#   - Bougie Parfumee Lavande
-#   - Bouquet de Fleurs Sechees
+# Produits commençant par 'Bou' :
+#   - Bougie Parfumée Lavande
+#   - Bouquet de Fleurs Séchées
 ```
 
 ### Motifs LIKE disponibles
 
 ```python
-# % = any sequence of characters
-# _ = exactly one character
+# % = n'importe quelle séquence de caractères
+# _ = exactement un caractère
 
-# Products containing "cuir" in the description
+# Produits contenant "cuir" dans la description
 results = products.select(
     where=products.description.like("%cuir%")
 )
-print("Leather products:")
+print("Produits en cuir :")
 for p in results:
     print(f"  - {p['name']}")
-# Leather products:
+# Produits en cuir :
 #   - Carnet en Cuir
 
-# Products with "DEC" followed by 3 characters in the SKU
+# Produits avec "DEC" suivi de 3 caractères dans le SKU
 results = products.select(
     where=products.sku.like("DEC___")
 )
-print(f"DEC products: {len(results)} items")
-# DEC products: 4 items
+print(f"Produits DEC : {len(results)} articles")
+# Produits DEC : 4 articles
 ```
 
-## Recherche insensible a la casse
+## Recherche insensible à la casse
 
-Les clients ne font pas toujours attention aux majuscules. Sophie utilise les variantes insensibles a la casse pour s'assurer qu'ils trouvent ce qu'ils cherchent.
+Les clients ne font pas toujours attention aux majuscules. Sophie utilise les variantes insensibles à la casse pour s'assurer qu'ils trouvent ce qu'ils cherchent.
 
 ```python
-# Case-insensitive search with icontains
+# Recherche insensible à la casse avec icontains
 results = products.select(
-    where=products.name.icontains("LAVANDE")  # Even typed in uppercase
+    where=products.name.icontains("LAVANDE")  # Même tapé en majuscules
 )
-print("Search 'LAVANDE':")
+print("Recherche 'LAVANDE' :")
 for p in results:
     print(f"  - {p['name']}")
-# Search 'LAVANDE':
-#   - Bougie Parfumee Lavande
+# Recherche 'LAVANDE' :
+#   - Bougie Parfumée Lavande
 
-# ilike for case-insensitive patterns
+# ilike pour les motifs insensibles à la casse
 results = products.select(
     where=products.description.ilike("%BIO%")
 )
-print("Search 'BIO' (case-insensitive):")
+print("Recherche 'BIO' (insensible à la casse) :")
 for p in results:
     print(f"  - {p['name']}")
-# Search 'BIO' (case-insensitive):
-#   - Coffret The Bio
+# Recherche 'BIO' (insensible à la casse) :
+#   - Coffret Thé Bio
 ```
 
 ### Toutes les variantes disponibles
 
-| Methode sensible a la casse | Methode insensible a la casse | Usage |
+| Méthode sensible à la casse | Méthode insensible à la casse | Usage |
 |----------------------------|------------------------------|-------|
-| `==` (egalite) | `iequals()` | Correspondance exacte |
+| `==` (égalité) | `iequals()` | Correspondance exacte |
 | `contains()` | `icontains()` | Contient du texte |
 | `startswith()` | `istartswith()` | Commence par |
 | `endswith()` | `iendswith()` | Termine par |
 | `like()` | `ilike()` | Motif SQL avec % et _ |
 
 ```python
-# Example with istartswith
+# Exemple avec istartswith
 results = products.select(
     where=products.name.istartswith("COFFRET")
 )
-print("Products starting with 'coffret' (case-insensitive):")
+print("Produits commençant par 'coffret' (insensible à la casse) :")
 for p in results:
     print(f"  - {p['name']}")
-# Products starting with 'coffret' (case-insensitive):
-#   - Coffret The Bio
+# Produits commençant par 'coffret' (insensible à la casse) :
+#   - Coffret Thé Bio
 ```
 
-## Mises a jour de stock avec Upsert
+## Mises à jour de stock avec Upsert
 
-Sophie recoit regulierement des livraisons. Elle utilise `upsert()` pour mettre a jour son stock : si le produit existe, il est mis a jour ; sinon, il est cree.
+Sophie reçoit régulièrement des livraisons. Elle utilise `upsert()` pour mettre à jour son stock : si le produit existe, il est mis à jour ; sinon, il est créé.
 
 ```python
-# Shipment arrival: updating stock for an existing product
+# Arrivée d'une livraison : mise à jour du stock pour un produit existant
 sku, action = products.upsert({
     "sku": "DEC001",
-    "name": "Bougie Parfumee Lavande",
-    "description": "Bougie artisanale a la lavande de Provence",
+    "name": "Bougie Parfumée Lavande",
+    "description": "Bougie artisanale à la lavande de Provence",
     "category": "Decor",
     "price": 15.90,
-    "stock": 75,  # New stock: 50 + 25 = 75
+    "stock": 75,  # Nouveau stock : 50 + 25 = 75
     "active": True,
 })
-print(f"Product {sku}: {action}")
-# Product DEC001: updated
+print(f"Produit {sku} : {action}")
+# Produit DEC001 : updated
 
-# New product in the shipment
+# Nouveau produit dans la livraison
 sku, action = products.upsert({
     "sku": "DEC005",
     "name": "Photophore en Verre",
-    "description": "Photophore artisanal en verre souffle",
+    "description": "Photophore artisanal en verre soufflé",
     "category": "Decor",
     "price": 24.90,
     "stock": 30,
     "active": True,
 })
-print(f"Product {sku}: {action}")
-# Product DEC005: inserted
+print(f"Produit {sku} : {action}")
+# Produit DEC005 : inserted
 ```
 
-### Strategies de conflit
+### Stratégies de conflit
 
-La methode `upsert()` accepte un parametre `on_conflict` pour gerer les doublons :
+La méthode `upsert()` accepte un paramètre `on_conflict` pour gérer les doublons :
 
 ```python
-# on_conflict="update" (default): updates if exists
+# on_conflict="update" (par défaut) : met à jour si existe
 sku, action = products.upsert(
     {"sku": "DEC001", "name": "Bougie Lavande", "description": "...",
      "category": "Decor", "price": 16.90, "stock": 80, "active": True},
     on_conflict="update"
 )
-print(f"{sku}: {action}")  # DEC001: updated
+print(f"{sku} : {action}")  # DEC001 : updated
 
-# on_conflict="ignore": does nothing if exists
+# on_conflict="ignore" : ne fait rien si existe
 sku, action = products.upsert(
     {"sku": "DEC001", "name": "Autre Bougie", "description": "...",
      "category": "Decor", "price": 99.00, "stock": 1, "active": True},
     on_conflict="ignore"
 )
-print(f"{sku}: {action}")  # DEC001: ignored
+print(f"{sku} : {action}")  # DEC001 : ignored
 
-# on_conflict="error": raises an exception if exists
+# on_conflict="error" : lève une exception si existe
 from dictdb import DuplicateKeyError
 
 try:
@@ -465,20 +465,20 @@ try:
         on_conflict="error"
     )
 except DuplicateKeyError:
-    print("Product already exists!")
-# Product already exists!
+    print("Le produit existe déjà !")
+# Le produit existe déjà !
 ```
 
-## Resume
+## Résumé
 
-Dans cet exemple, Sophie a appris a :
+Dans cet exemple, Sophie a appris à :
 
-1. **Valider les donnees avec un schema** : S'assurer que chaque produit possede tous les champs requis avec les types corrects
-2. **Creer des index** : Utiliser des index hash pour les recherches d'egalite et des index tries pour les requetes par plage
-3. **Combiner des conditions** : Utiliser `And`, `Or` et `Not` pour des requetes complexes
+1. **Valider les données avec un schéma** : S'assurer que chaque produit possède tous les champs requis avec les types corrects
+2. **Créer des index** : Utiliser des index hash pour les recherches d'égalité et des index triés pour les requêtes par plage
+3. **Combiner des conditions** : Utiliser `And`, `Or` et `Not` pour des requêtes complexes
 4. **Filtrer par plage** : Utiliser `between()` pour les recherches par gamme de prix
 5. **Rechercher du texte** : Utiliser `like()` avec les motifs `%` et `_`
-6. **Ignorer la casse** : Utiliser `icontains()`, `ilike()` et autres variantes insensibles a la casse
-7. **Gerer le stock** : Utiliser `upsert()` pour creer ou mettre a jour des produits
+6. **Ignorer la casse** : Utiliser `icontains()`, `ilike()` et autres variantes insensibles à la casse
+7. **Gérer le stock** : Utiliser `upsert()` pour créer ou mettre à jour des produits
 
-Sophie est maintenant prete a lancer sa boutique en ligne avec un systeme de gestion de catalogue robuste et performant !
+Sophie est maintenant prête à lancer sa boutique en ligne avec un système de gestion de catalogue robuste et performant !
